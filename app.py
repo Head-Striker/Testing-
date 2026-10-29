@@ -37,8 +37,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 #name{font-size:clamp(30px,7vw,72px);font-weight:900;letter-spacing:3px;margin-top:20px;overflow-wrap:anywhere}
 #sub{font-size:11px;letter-spacing:3px;color:#c2b49b;margin-top:14px}
 #hint{font-size:10px;letter-spacing:3px;color:#847b6b;margin-top:32px}
-#event{display:none;position:absolute;inset:0;z-index:5;align-items:center;justify-content:center;text-align:center;flex-direction:column;overflow:hidden;background:#030303}
-#event.show{display:flex}
+#event{display:none;position:fixed;inset:0;width:100vw;height:100vh;z-index:99999;align-items:center;justify-content:center;text-align:center;flex-direction:column;overflow:hidden;background:#030303;opacity:0;transition:opacity .1s ease}
+#event.show{display:flex;opacity:1}
+#event.fade-out{opacity:0}
+#eventLabel,#eventSub{display:none!important}
 .scene.revealing > .center{visibility:hidden}
 #event{background:#030303}
 #eventName{line-height:1.05;text-wrap:balance}
@@ -47,10 +49,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 #introProgress{box-shadow:0 0 18px #c6a76d55}
 .scene.revealing #event{background:#030303}
 #eventCanvas{z-index:0}
-.eventText{position:relative;z-index:2;padding:18px}
-#eventLabel{font-size:10px;letter-spacing:6px;color:#c6ad7b}
-#eventName{font-size:clamp(36px,9vw,94px);font-weight:1000;letter-spacing:3px;margin-top:25px;overflow-wrap:anywhere;text-shadow:0 0 45px currentColor}
-#eventSub{font-size:11px;letter-spacing:3px;color:#d4c8ae;margin-top:20px}
+.eventText{position:relative;z-index:2;padding:18px;max-width:100vw}
+#eventName{font-size:clamp(36px,8vw,110px);font-weight:1000;letter-spacing:3px;line-height:1.05;margin:0;padding:0 5vw;overflow-wrap:anywhere;text-wrap:balance;text-shadow:0 0 45px currentColor}
 #flash{position:absolute;inset:0;background:#f2e4c8;opacity:0;z-index:8;pointer-events:none}
 #intro{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:#030303;overflow:hidden;transition:opacity 1s}
 #introCanvas{z-index:0}
@@ -203,9 +203,11 @@ const world=$("world"),ctx=world.getContext("2d");
 const ec=$("eventCanvas"),ex=ec.getContext("2d");
 const ic=$("introCanvas"),ix=ic.getContext("2d");
 const scene=$("scene");
+// Move the reveal layer out of the scene stacking context so it can cover the whole viewport.
+document.body.appendChild($("event"));
 const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-let W=1,H=1,D=1,stars=[],particles=[],rings=[];
+let W=1,H=1,EW=1,EH=1,D=1,stars=[],particles=[],rings=[];
 let rolling=false,auto=false,introDone=false,rollTotal=0;
 let inventory={},best=null,current=null,sequence=null;
 let token=0,flash=0,last=performance.now(),introStart=performance.now();
@@ -231,10 +233,13 @@ load();
 function resize(){
  D=Math.min(devicePixelRatio||1,2);
  const r=scene.getBoundingClientRect();W=Math.max(1,r.width);H=Math.max(1,r.height);
- for(const [c,w,h,context] of [[world,W,H,ctx],[ec,W,H,ex],[ic,W,H,ix]]){
+ for(const [c,w,h,context] of [[world,W,H,ctx],[ic,W,H,ix]]){
   c.width=Math.round(w*D);c.height=Math.round(h*D);
   context.setTransform(D,0,0,D,0,0);
  }
+ const fullscreen=$("event").classList.contains("show");
+ EW=Math.max(1,fullscreen?window.innerWidth:W);EH=Math.max(1,fullscreen?window.innerHeight:H);
+ ec.width=Math.round(EW*D);ec.height=Math.round(EH*D);ex.setTransform(D,0,0,D,0,0);
  stars=Array.from({length:230},()=>({
   x:Math.random()*W,y:Math.random()*H,z:.15+Math.random(),p:Math.random()*6.28
  }));
@@ -326,9 +331,13 @@ function playReveal(a,replay){
  const myToken=++token;
  current=a;setBusy(true);
  scene.classList.add("revealing");
- $("event").classList.add("show");
- // Important: canvases were hidden before this point. Recalculate their size.
+ const eventLayer=$("event");
+ eventLayer.classList.remove("fade-out");
+ eventLayer.style.opacity="0";
+ eventLayer.classList.add("show");
+ // Expand the reveal canvas to the full visible viewport.
  resize();
+ requestAnimationFrame(()=>{eventLayer.style.opacity="1";});
  $("eventLabel").textContent="AN UNKNOWN PRESENCE APPROACHES";
  $("eventName").textContent="";
  $("eventSub").textContent="ENERGY CONVERGENCE";
@@ -341,9 +350,8 @@ function playReveal(a,replay){
 }
 function complete(s){
  if(s.done)return;s.done=true;
- $("eventLabel").textContent=s.replay?"DISCOVERY REPLAYED":"THE VEIL HAS BEEN LIFTED";
+ // During the reveal there are no extra captions; only the final aura name appears.
  $("eventName").textContent=s.a.name;
- $("eventSub").textContent="1 IN "+s.a.odds.toLocaleString()+" · "+s.a.tier;
  $("event").style.background=
   "radial-gradient(ellipse at center,"+color(s.a.color,.16)+",#030303 70%)";
  flash=s.a.odds>=100000?.8:(s.a.odds>=1000?.35:.12);
@@ -364,11 +372,19 @@ function complete(s){
  // A guaranteed cleanup path: the next roll cannot remain locked.
  setTimeout(()=>{
   if(s.token!==token)return;
-  $("event").classList.remove("show");
-  setBusy(false);
-  if(auto){
-   autoTimer=setTimeout(()=>{autoTimer=null;if(auto&&!rolling)roll();},350);
-  }
+  const eventLayer=$("event");
+  eventLayer.classList.add("fade-out");
+  eventLayer.style.opacity="0";
+  // Fade the full-screen reveal away over 100 ms, exposing the start screen.
+  setTimeout(()=>{
+   if(s.token!==token)return;
+   eventLayer.classList.remove("show","fade-out");
+   eventLayer.style.opacity="";
+   scene.classList.remove("revealing");
+   resize();
+   setBusy(false);
+   if(auto){autoTimer=setTimeout(()=>{autoTimer=null;if(auto&&!rolling)roll();},350);}
+  },100);
  },s.replay?1300:1500);
 }
 function updateSequence(now){
@@ -489,15 +505,15 @@ function draw(now){
 
  // Aura-specific reveal effects: each style has its own silhouette/motion language.
  if($("event").classList.contains("show")){
-  ex.clearRect(0,0,W,H);
+  ex.clearRect(0,0,EW,EH);
   const s=sequence;
   if(s){
-   const p=Math.min(1,(now-s.start)/s.duration),a=s.a,cx2=W/2,cy2=H/2,limit=Math.min(W,H)*.46;
-   // Always paint an opaque backdrop: prevents the aura text behind this layer appearing twice.
-   ex.fillStyle="#030306";ex.fillRect(0,0,W,H);
+   const p=Math.min(1,(now-s.start)/s.duration),a=s.a,cx2=EW/2,cy2=EH/2,limit=Math.min(EW,EH)*.46;
+   // Opaque backdrop fills the screen and prevents duplicate text from the start screen.
+   ex.fillStyle="#030306";ex.fillRect(0,0,EW,EH);
    const glow=ex.createRadialGradient(cx2,cy2,1,cx2,cy2,limit*(.35+p*.8));
    glow.addColorStop(0,color(a.color,.2+p*.22));glow.addColorStop(1,"rgba(0,0,0,0)");
-   ex.fillStyle=glow;ex.fillRect(0,0,W,H);
+   ex.fillStyle=glow;ex.fillRect(0,0,EW,EH);
    ex.save();ex.translate(cx2,cy2);
    const spin=t*(a.odds>=100000?-.65:.35),style=a.style;
    ex.strokeStyle=color(a.color,.8);ex.fillStyle=color(a.color,.16);ex.lineWidth=1.5;
@@ -575,4 +591,4 @@ $("codeForm").addEventListener("submit",e=>{
 </html>
 """
 
-components.html(html, height=1550, scrolling=True)
+components.html(html, height=900, scrolling=True)
