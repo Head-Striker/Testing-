@@ -3,9 +3,14 @@ import streamlit as st
 import random
 import time
 
-st.set_page_config(page_title="Game Shop", page_icon="🎮", layout="wide")
+st.set_page_config(
+    page_title="Game Shop",
+    page_icon="🎮",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-# -------------------- SHOP DATA --------------------
+# -------------------- SHOP --------------------
 
 START_SHOP = {
     "bread": [4.99, 15],
@@ -75,48 +80,55 @@ CATEGORIES = {
 }
 
 INFO = {
-    "bread": ("🍞", "You can eat this.", True),
-    "cheese": ("🧀", "A tasty snack.", True),
-    "cola": ("🥤", "A refreshing drink.", True),
-    "pancakes": ("🥞", "A stack of pancakes.", True),
-    "pizza": ("🍕", "A delicious pizza.", True),
-    "burger": ("🍔", "A classic burger.", True),
-    "fries": ("🍟", "Crispy fries.", True),
-    "chocolate": ("🍫", "Something sweet.", True),
-    "cookie": ("🍪", "A freshly baked cookie.", True),
-    "cake": ("🍰", "A slice of cake.", True),
-    "apple": ("🍎", "A fresh apple.", True),
-    "banana": ("🍌", "A ripe banana.", True),
-    "water": ("💧", "A bottle of water.", True),
-    "energy_drink": ("⚡", "An energy drink.", True),
+    "bread": ("🍞", "You can eat this."),
+    "cheese": ("🧀", "A tasty snack."),
+    "cola": ("🥤", "A refreshing drink."),
+    "pancakes": ("🥞", "A stack of pancakes."),
+    "pizza": ("🍕", "A delicious pizza."),
+    "burger": ("🍔", "A classic burger."),
+    "fries": ("🍟", "Crispy fries."),
+    "chocolate": ("🍫", "Something sweet."),
+    "cookie": ("🍪", "A freshly baked cookie."),
+    "cake": ("🍰", "A slice of cake."),
+    "apple": ("🍎", "A fresh apple."),
+    "banana": ("🍌", "A ripe banana."),
+    "water": ("💧", "Drink this to restore thirst."),
+    "energy_drink": ("⚡", "A drink that restores thirst."),
 
-    "headphones": ("🎧", "Listen to your favourite sounds.", False),
-    "keyboard": ("⌨️", "A keyboard for your setup.", False),
-    "mouse": ("🖱️", "A gaming mouse.", False),
-    "monitor": ("🖥️", "A computer monitor.", False),
-    "phone": ("📱", "A modern phone.", False),
-    "laptop": ("💻", "A portable computer.", False),
-    "gaming_pc": ("🖥️", "A powerful gaming PC.", False),
-    "controller": ("🎮", "A gaming controller.", False),
+    "headphones": ("🎧", "Listen to your favourite sounds."),
+    "keyboard": ("⌨️", "A keyboard for your setup."),
+    "mouse": ("🖱️", "A gaming mouse."),
+    "monitor": ("🖥️", "A computer monitor."),
+    "phone": ("📱", "A modern phone."),
+    "laptop": ("💻", "A portable computer."),
+    "gaming_pc": ("🖥️", "A powerful gaming PC."),
+    "controller": ("🎮", "A gaming controller."),
 
-    "tshirt": ("👕", "A casual T-shirt.", False),
-    "hoodie": ("🧥", "A comfortable hoodie.", False),
-    "jeans": ("👖", "A pair of jeans.", False),
-    "sneakers": ("👟", "A pair of sneakers.", False),
-    "cap": ("🧢", "A cap for your character.", False),
+    "tshirt": ("👕", "A casual T-shirt."),
+    "hoodie": ("🧥", "A comfortable hoodie."),
+    "jeans": ("👖", "A pair of jeans."),
+    "sneakers": ("👟", "A pair of sneakers."),
+    "cap": ("🧢", "A cap for your character."),
 
-    "minecraft": ("⛏️", "A block-building adventure.", False),
-    "gaming_chair": ("🪑", "A chair for your gaming setup.", False),
-    "gaming_desk": ("🪵", "A desk for your setup.", False),
-    "microphone": ("🎙️", "A microphone.", False),
-    "webcam": ("📷", "A webcam.", False),
+    "minecraft": ("⛏️", "A block-building adventure."),
+    "gaming_chair": ("🪑", "A chair for your setup."),
+    "gaming_desk": ("🪵", "A desk for your setup."),
+    "microphone": ("🎙️", "A microphone."),
+    "webcam": ("📷", "A webcam."),
 
-    "diamond": ("💎", "A rare and valuable diamond.", False),
-    "gold_bar": ("🥇", "A precious gold bar.", False),
-    "mystery_box": ("🎁", "What's inside? It's a mystery.", False),
-    "legendary_trophy": ("🏆", "An extremely rare trophy.", False),
-    "uranium": ("☢️", "Don't taste this.", False),
+    "diamond": ("💎", "A rare diamond."),
+    "gold_bar": ("🥇", "A precious gold bar."),
+    "mystery_box": ("🎁", "What's inside? It's a mystery."),
+    "legendary_trophy": ("🏆", "An extremely rare trophy."),
+    "uranium": ("☢️", "Don't taste this."),
 }
+
+# Food restores hunger; drinks restore thirst.
+FOOD_ITEMS = {
+    "bread", "cheese", "pancakes", "pizza", "burger", "fries",
+    "chocolate", "cookie", "cake", "apple", "banana",
+}
+DRINK_ITEMS = {"cola", "water", "energy_drink"}
 
 # -------------------- SESSION STATE --------------------
 
@@ -125,10 +137,10 @@ if "money" not in st.session_state:
 
 if "shop" not in st.session_state:
     st.session_state.shop = {
-        key: value.copy() for key, value in START_SHOP.items()
+        k: v.copy() for k, v in START_SHOP.items()
     }
 
-# Add new items to existing sessions too.
+# Add new items to existing sessions.
 for item, data in START_SHOP.items():
     st.session_state.shop.setdefault(item, data.copy())
 
@@ -141,11 +153,17 @@ if "notice" not in st.session_state:
 if "last_spin" not in st.session_state:
     st.session_state.last_spin = None
 
+if "hunger" not in st.session_state:
+    st.session_state.hunger = 100.0
+
+if "thirst" not in st.session_state:
+    st.session_state.thirst = 100.0
+
+if "survival_updated_at" not in st.session_state:
+    st.session_state.survival_updated_at = time.time()
+
 if "game_over" not in st.session_state:
     st.session_state.game_over = False
-
-if "death_sequence_done" not in st.session_state:
-    st.session_state.death_sequence_done = False
 
 if "stats" not in st.session_state:
     st.session_state.stats = {
@@ -154,37 +172,58 @@ if "stats" not in st.session_state:
         "money_earned": 0.0,
     }
 
-# -------------------- CSS DESIGN --------------------
+# -------------------- SURVIVAL TIMER --------------------
+
+# Hunger and thirst decrease with real elapsed time.
+now = time.time()
+elapsed = max(0, now - st.session_state.survival_updated_at)
+st.session_state.survival_updated_at = now
+
+st.session_state.hunger = max(
+    0, st.session_state.hunger - elapsed * 0.12
+)
+st.session_state.thirst = max(
+    0, st.session_state.thirst - elapsed * 0.18
+)
+
+if st.session_state.hunger <= 0 or st.session_state.thirst <= 0:
+    st.session_state.game_over = True
+
+# -------------------- NEON DESIGN --------------------
 
 st.markdown("""
 <style>
 .stApp {
-    background:
-        radial-gradient(ellipse at top left, #38106a 0%, transparent 38%),
-        radial-gradient(ellipse at bottom right, #063e54 0%, transparent 38%),
-        #10101b;
+    background-color: #10101b;
+    background-image:
+        radial-gradient(ellipse at 12% 8%, #51138a 0%, transparent 40%),
+        radial-gradient(ellipse at 88% 75%, #07566a 0%, transparent 42%);
+    background-attachment: fixed;
     color: #f7f2ff;
 }
 
+[data-testid="stAppViewContainer"] {
+    background: transparent;
+}
+
 [data-testid="stSidebar"] {
-    background: #191329;
+    background: rgba(25, 19, 41, 0.97);
     border-right: 2px solid #8c36d9;
 }
 
 h1, h2, h3 {
     color: #ffffff;
-    letter-spacing: -0.5px;
 }
 
 div[data-testid="stMetric"] {
-    background: #201832;
+    background: rgba(32, 24, 50, 0.94);
     border: 1px solid #7338a8;
-    padding: 16px;
+    padding: 14px;
     border-radius: 14px;
 }
 
 div[data-testid="stVerticalBlockBorderWrapper"] {
-    background: rgba(31, 23, 49, 0.94);
+    background: rgba(31, 23, 49, 0.96);
     border: 1px solid #563b78;
     border-radius: 15px;
 }
@@ -201,11 +240,11 @@ div.stButton > button {
 div.stButton > button:hover {
     filter: brightness(1.2);
     transform: translateY(-2px);
-    border-color: #ffffff;
+    border-color: white;
 }
 
 .item-emoji {
-    font-size: 42px;
+    font-size: 40px;
     margin-bottom: 8px;
 }
 
@@ -222,7 +261,7 @@ div.stButton > button:hover {
 }
 
 .item-stock {
-    color: #b5a9ca;
+    color: #c3b7d4;
     font-size: 12px;
     margin-top: 4px;
 }
@@ -233,8 +272,8 @@ div.stButton > button:hover {
     border-radius: 16px;
     padding: 18px 3px;
     text-align: center;
-    font-size: 48px;
-    min-height: 110px;
+    font-size: 42px;
+    min-height: 95px;
     box-shadow: 0 0 12px #6824a833;
 }
 
@@ -248,14 +287,8 @@ div.stButton > button:hover {
 }
 
 @keyframes jackpot-glow {
-    0%, 100% {
-        box-shadow: 0 0 8px #ffdd45;
-        transform: scale(1);
-    }
-    50% {
-        box-shadow: 0 0 38px #ff9d00;
-        transform: scale(1.015);
-    }
+    0%, 100% { box-shadow: 0 0 8px #ffdd45; }
+    50% { box-shadow: 0 0 38px #ff9d00; }
 }
 
 .jackpot {
@@ -266,44 +299,6 @@ div.stButton > button:hover {
     text-align: center;
     animation: jackpot-glow 0.8s ease-in-out infinite;
 }
-
-@keyframes nausea {
-    0% { filter: hue-rotate(0deg); transform: translateX(0); }
-    25% { filter: hue-rotate(100deg); transform: translateX(-3px); }
-    50% { filter: hue-rotate(180deg); transform: translateX(3px); }
-    75% { filter: hue-rotate(80deg); transform: translateX(-2px); }
-    100% { filter: hue-rotate(0deg); transform: translateX(0); }
-}
-
-.nausea-screen {
-    background: #243d19;
-    color: #eaffd9;
-    padding: 28px;
-    border-radius: 15px;
-    border: 2px solid #91d62e;
-    animation: nausea 0.5s infinite;
-    text-align: center;
-}
-
-.game-over {
-    background: #050505;
-    color: white;
-    padding: 45px 22px;
-    text-align: center;
-    border: 1px solid #333;
-    border-radius: 12px;
-}
-
-div[role="radiogroup"] {
-    gap: 8px;
-}
-
-div[role="radiogroup"] label {
-    background: #211831;
-    border: 1px solid #633b91;
-    padding: 10px;
-    border-radius: 9px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -313,7 +308,7 @@ def pretty_name(item):
     return item.replace("_", " ").title()
 
 def emoji_for(item):
-    return INFO.get(item, ("📦", "", False))[0]
+    return INFO.get(item, ("📦", ""))[0]
 
 def buy_item(item, quantity):
     price, stock = st.session_state.shop[item]
@@ -324,7 +319,9 @@ def buy_item(item, quantity):
     elif st.session_state.money < total:
         st.session_state.notice = ("error", "Not enough money.")
     else:
-        st.session_state.money = round(st.session_state.money - total, 2)
+        st.session_state.money = round(
+            st.session_state.money - total, 2
+        )
         st.session_state.shop[item][1] -= quantity
         st.session_state.inventory[item] = (
             st.session_state.inventory.get(item, 0) + quantity
@@ -342,44 +339,63 @@ def use_item(item):
         return
 
     if item == "uranium":
-        # Fictional game-over effect.
         st.session_state.inventory[item] -= 1
         if st.session_state.inventory[item] <= 0:
             del st.session_state.inventory[item]
         st.session_state.game_over = True
-        st.session_state.death_sequence_done = False
+        st.session_state.notice = None
         st.rerun()
 
-    can_eat = INFO.get(item, ("", "", False))[2]
-
-    if can_eat:
-        st.session_state.inventory[item] -= 1
-        if st.session_state.inventory[item] <= 0:
-            del st.session_state.inventory[item]
-        st.session_state.notice = (
-            "success", f"You used {pretty_name(item)}!"
+    if item in FOOD_ITEMS:
+        st.session_state.hunger = min(
+            100, st.session_state.hunger + 35
         )
+        st.session_state.inventory[item] -= 1
+        st.session_state.notice = (
+            "success", f"You ate {pretty_name(item)}. Hunger restored!"
+        )
+
+    elif item in DRINK_ITEMS:
+        st.session_state.thirst = min(
+            100, st.session_state.thirst + 40
+        )
+        st.session_state.inventory[item] -= 1
+        st.session_state.notice = (
+            "success", f"You drank {pretty_name(item)}. Thirst restored!"
+        )
+
     else:
         st.session_state.notice = (
-            "info", INFO.get(item, ("", "You inspected this item.", False))[1]
+            "info", INFO.get(item, ("", "You inspected this item."))[1]
         )
 
-# -------------------- ITEM POP-UP --------------------
+    if item in st.session_state.inventory:
+        if st.session_state.inventory[item] <= 0:
+            del st.session_state.inventory[item]
+
+    st.rerun()
+
+# -------------------- ITEM DETAILS --------------------
 
 @st.dialog("Item details", width="small")
 def item_dialog(item):
     price, stock = st.session_state.shop[item]
-    emoji, description, _ = INFO[item]
+    emoji, description = INFO[item]
 
     st.markdown(
         f"<div style='font-size:80px;text-align:center'>{emoji}</div>",
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
     st.subheader(pretty_name(item))
     st.write(description)
 
     if item == "uranium":
         st.warning("☢️ Don't taste this.")
+
+    if item in FOOD_ITEMS:
+        st.caption("🍽️ Using this restores hunger.")
+    elif item in DRINK_ITEMS:
+        st.caption("💧 Using this restores thirst.")
 
     st.markdown(f"### €{price:,.2f}")
     st.caption(f"{stock} available in stock")
@@ -392,6 +408,7 @@ def item_dialog(item):
             value=1,
             key=f"quantity_{item}",
         )
+
         if st.button("🛒 Buy item", use_container_width=True):
             buy_item(item, quantity)
             st.rerun()
@@ -411,69 +428,76 @@ page = st.sidebar.radio(
 
 st.sidebar.divider()
 st.sidebar.metric("💰 Balance", f"€{st.session_state.money:,.2f}")
-st.sidebar.caption("Your game. Your collection.")
+
+# Survival indicators
+st.sidebar.markdown("### SURVIVAL")
+
+st.sidebar.write(f"🍗 Hunger — {int(st.session_state.hunger)}%")
+st.sidebar.progress(int(st.session_state.hunger))
+
+st.sidebar.write(f"💧 Thirst — {int(st.session_state.thirst)}%")
+st.sidebar.progress(int(st.session_state.thirst))
+
+st.sidebar.caption("Food restores hunger. Drinks restore thirst.")
+
+# Main-page survival status
+top1, top2 = st.columns(2)
+
+with top1:
+    st.caption(f"🍗 HUNGER · {int(st.session_state.hunger)}%")
+    st.progress(int(st.session_state.hunger))
+
+with top2:
+    st.caption(f"💧 THIRST · {int(st.session_state.thirst)}%")
+    st.progress(int(st.session_state.thirst))
+
+if st.session_state.hunger < 25:
+    st.warning("Your hunger is low! Buy food and eat it in your inventory.")
+
+if st.session_state.thirst < 25:
+    st.warning("Your thirst is low! Buy a drink and use it in your inventory.")
+
+if st.session_state.notice:
+    kind, message = st.session_state.notice
+    if kind == "success":
+        st.success(message)
+    elif kind == "error":
+        st.error(message)
+    else:
+        st.info(message)
+    st.session_state.notice = None
 
 # -------------------- GAME OVER --------------------
 
 if st.session_state.game_over:
-    st.markdown("# ☢️ Critical game status")
-
-    if not st.session_state.death_sequence_done:
-        screen = st.empty()
-
-        # The green nausea effect lasts 15 seconds.
-        for second in range(15):
-            if second < 10:
-                screen.markdown(
-                    f"""
-                    <div class="nausea-screen">
-                        <h2>SYSTEM FAILURE</h2>
-                        <p>Fictional game effect...</p>
-                        <h3>{second + 1}/15</h3>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-            else:
-                # Black fade begins after 10 seconds.
-                opacity = min((second - 9) / 5, 1)
-                screen.markdown(
-                    f"""
-                    <div style="
-                        background:rgba(0,0,0,{opacity});
-                        color:white;padding:40px;text-align:center;
-                        border-radius:12px;min-height:180px;">
-                        <h2>CONNECTION LOST</h2>
-                        <p>Game session ending...</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-            time.sleep(1)
-
-        st.session_state.death_sequence_done = True
-        st.rerun()
-
-    st.markdown(
-        """
-        <div class="game-over">
-            <div style="letter-spacing:5px;color:#aaa">GAME SESSION ENDED</div>
-            <h1 style="font-size:56px;margin-top:25px">WASTED</h1>
-            <p>Character eliminated · Fictional game screen</p>
-        </div>
-        """,
-        unsafe_allow_html=True
+    st.title("☠️ GAME OVER")
+    st.error(
+        "Your character ran out of hunger or thirst, "
+        "or triggered the fictional uranium game-over effect."
     )
 
-    st.subheader("SESSION STATISTICS")
+    st.subheader("Session statistics")
     c1, c2, c3 = st.columns(3)
-    c1.metric("Final balance", f"€{st.session_state.money:,.2f}")
+    c1.metric("Balance", f"€{st.session_state.money:,.2f}")
     c2.metric("Items bought", st.session_state.stats["items_bought"])
     c3.metric("Spins played", st.session_state.stats["spins"])
 
-    if st.button("Return to shop", use_container_width=True):
+    if st.button("Start a new game", use_container_width=True):
+        st.session_state.money = 250.00
+        st.session_state.inventory = {}
+        st.session_state.hunger = 100.0
+        st.session_state.thirst = 100.0
+        st.session_state.survival_updated_at = time.time()
         st.session_state.game_over = False
-        st.session_state.death_sequence_done = False
+        st.session_state.shop = {
+            k: v.copy() for k, v in START_SHOP.items()
+        }
+        st.session_state.last_spin = None
+        st.session_state.stats = {
+            "items_bought": 0,
+            "spins": 0,
+            "money_earned": 0.0,
+        }
         st.rerun()
 
 # -------------------- SHOP --------------------
@@ -481,17 +505,7 @@ if st.session_state.game_over:
 elif page == "Shop":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
     st.title("🛍️ Shop")
-    st.caption("Browse categories and click an item to view its details.")
-
-    if st.session_state.notice:
-        kind, message = st.session_state.notice
-        if kind == "success":
-            st.success(message)
-        elif kind == "error":
-            st.error(message)
-        else:
-            st.info(message)
-        st.session_state.notice = None
+    st.caption("Browse categories and click an item for details.")
 
     search = st.text_input(
         "Search items",
@@ -561,20 +575,26 @@ elif page == "Money Machine":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
     st.title("🎰 Money Machine")
     st.write("Free spins. Three reels. One big jackpot.")
-    st.caption("Reel 1 stops at 3.3s · Reel 2 at 6.6s · Reel 3 at 9.9s")
+    st.caption("Reel 1: 1.5s · Reel 2: 3.0s · Reel 3: 4.5s")
 
-    # This button's callback runs a single complete spin.
-    # Streamlit cannot process a second click while the spin is running.
     if st.button("🎰 SPIN — FREE", use_container_width=True):
         symbols = ["🍋", "🍒", "🍇", "🍉", "⭐", "💎", "🔔", "🍊"]
 
-        if random.random() < 0.04:
-            final_symbols = ["🍋", "🍋", "🍋"]
-        else:
-            final_symbols = [random.choice(symbols) for _ in range(3)]
+        final_symbols = [random.choice(symbols) for _ in range(3)]
+        stop_times = [1.5, 3.0, 4.5]
 
-        stop_times = [3.3, 6.6, 9.9]
-        reels = [st.empty(), st.empty(), st.empty()]
+        # A rare special jackpot.
+        if random.random() < 0.025:
+            final_symbols = ["🍋", "🍋", "🍋"]
+
+        # Create three columns so reels stay side by side.
+        reel_columns = st.columns(3)
+        reels = []
+
+        for col in reel_columns:
+            with col:
+                reels.append(st.empty())
+
         start_time = time.time()
 
         while True:
@@ -586,20 +606,21 @@ elif page == "Money Machine":
                     if elapsed < stop_times[i]
                     else final_symbols[i]
                 )
+
                 reel.markdown(
                     f'<div class="slot">{symbol}</div>',
                     unsafe_allow_html=True,
                 )
 
-            if elapsed >= 9.9:
+            if elapsed >= 4.5:
                 break
 
-            time.sleep(0.05)
+            time.sleep(0.04)
 
         if final_symbols == ["🍋", "🍋", "🍋"]:
             reward = 1000
-            st.session_state.money = round(st.session_state.money + reward, 2)
-            st.session_state.stats["money_earned"] += reward
+            result_text = "🍋 JACKPOT! You won €1,000!"
+            st.balloons()
 
             st.markdown(
                 """
@@ -612,30 +633,30 @@ elif page == "Money Machine":
                 """,
                 unsafe_allow_html=True,
             )
-            st.balloons()
 
         elif len(set(final_symbols)) == 1:
-            reward = 25
-            st.session_state.money += reward
-            st.session_state.stats["money_earned"] += reward
-            st.success("🎉 Triple match! You won €25!")
+            reward = 500
+            result_text = "🎉 Triple match! You won €500!"
 
         elif len(set(final_symbols)) == 2:
-            reward = 10
-            st.session_state.money += reward
-            st.session_state.stats["money_earned"] += reward
-            st.success("✨ Two symbols match! You won €10!")
+            reward = 100
+            result_text = "✨ Double match! You won €100!"
 
         else:
             reward = 0
-            st.info("No match this time!")
+            result_text = "No match. You won €0."
 
+        st.session_state.money = round(
+            st.session_state.money + reward, 2
+        )
+        st.session_state.stats["money_earned"] += reward
         st.session_state.stats["spins"] += 1
         st.session_state.last_spin = {
             "symbols": final_symbols,
             "reward": reward,
         }
 
+        st.success(result_text)
         st.metric("Updated balance", f"€{st.session_state.money:,.2f}")
 
     if st.session_state.last_spin:
@@ -643,10 +664,13 @@ elif page == "Money Machine":
         st.caption("LAST RESULT")
         st.write(
             "  ".join(st.session_state.last_spin["symbols"])
-            + f"   ·   Reward: €{st.session_state.last_spin['reward']:,.2f}"
+            + f"   ·   €{st.session_state.last_spin['reward']:,.2f}"
         )
 
-    st.caption("🍋 🍋 🍋 = €1,000 · Triple = €25 · Pair = €10 · Other = €0")
+    st.caption(
+        "🍋 🍋 🍋 = €1,000 jackpot · Other triple = €500 · "
+        "Double = €100 · Other = €0"
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------- INVENTORY --------------------
@@ -654,20 +678,11 @@ elif page == "Money Machine":
 elif page == "Inventory":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
     st.title("🎒 Inventory")
-    st.caption("Everything you own.")
-
-    if st.session_state.notice:
-        kind, message = st.session_state.notice
-        if kind == "success":
-            st.success(message)
-        elif kind == "error":
-            st.error(message)
-        else:
-            st.info(message)
-        st.session_state.notice = None
+    st.caption("Use your food and drinks to survive.")
 
     if not st.session_state.inventory:
         st.info("Your inventory is empty. Visit the shop to buy items.")
+
     else:
         for item, quantity in list(st.session_state.inventory.items()):
             if quantity <= 0:
@@ -687,8 +702,13 @@ elif page == "Inventory":
                     st.caption(INFO[item][1])
                     st.caption(f"Quantity: {quantity}")
 
+                    if item in FOOD_ITEMS:
+                        st.caption("🍗 Restores 35 hunger")
+                    elif item in DRINK_ITEMS:
+                        st.caption("💧 Restores 40 thirst")
+
                 with col3:
-                    if INFO[item][2] or item == "uranium":
+                    if item in FOOD_ITEMS or item in DRINK_ITEMS or item == "uranium":
                         button_label = "Use item"
                     else:
                         button_label = "Inspect"
@@ -699,7 +719,6 @@ elif page == "Inventory":
                         use_container_width=True,
                     ):
                         use_item(item)
-                        st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -708,7 +727,6 @@ elif page == "Inventory":
 elif page == "Stats":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
     st.title("📊 Statistics")
-    st.caption("Your progress this session.")
 
     c1, c2 = st.columns(2)
     c1.metric("Current balance", f"€{st.session_state.money:,.2f}")
@@ -722,8 +740,17 @@ elif page == "Stats":
     )
 
     st.divider()
+    st.subheader("Survival status")
+    st.write(f"Hunger: {int(st.session_state.hunger)}%")
+    st.progress(int(st.session_state.hunger))
+    st.write(f"Thirst: {int(st.session_state.thirst)}%")
+    st.progress(int(st.session_state.thirst))
+
+    st.divider()
     st.subheader("Collection")
     st.write(f"Unique items: {len(st.session_state.inventory)}")
-    st.write(f"Total quantity: {sum(st.session_state.inventory.values())}")
+    st.write(
+        f"Total quantity: {sum(st.session_state.inventory.values())}"
+    )
 
     st.markdown("</div>", unsafe_allow_html=True)
