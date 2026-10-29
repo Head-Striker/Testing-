@@ -1,8 +1,9 @@
-
 import streamlit as st
 import random
 import time
 import html
+import sqlite3
+import os
 
 st.set_page_config(
     page_title="Game Shop",
@@ -12,7 +13,43 @@ st.set_page_config(
 )
 
 # ============================================================
-# GAME SHOP + GAMBLING + ROLLS RNG
+# DATABASE: GLOBALE BERICHTEN
+# ============================================================
+
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "game_messages.db")
+
+
+def init_database():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS global_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message TEXT NOT NULL,
+                created_at REAL NOT NULL
+            )
+        """)
+
+
+def send_global_message(message):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute(
+            "INSERT INTO global_messages (message, created_at) VALUES (?, ?)",
+            (message, time.time()),
+        )
+
+
+def get_global_messages(limit=5):
+    with sqlite3.connect(DB_PATH) as conn:
+        return conn.execute(
+            "SELECT message, created_at FROM global_messages ORDER BY id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+
+
+init_database()
+
+# ============================================================
+# GAME SHOP
 # ============================================================
 
 START_SHOP = {
@@ -109,44 +146,25 @@ DRINK_ITEMS = {"cola", "water", "energy_drink"}
 # ============================================================
 
 ROLL_ITEMS = [
-    {"name": "Roblox", "odds": 2, "rarity": "Common",
-     "animation": "no", "emoji": "🟥"},
-    {"name": "Enrique", "odds": 4, "rarity": "Common",
-     "animation": "no", "emoji": "🎵"},
-    {"name": "Unknown I", "odds": 8, "rarity": "Common",
-     "animation": "no", "emoji": "⚪"},
-    {"name": "Unknown II", "odds": 16, "rarity": "Common",
-     "animation": "no", "emoji": "🔹"},
-    {"name": "Unknown III", "odds": 32, "rarity": "Common",
-     "animation": "no", "emoji": "🔸"},
-    {"name": "Unknown IV", "odds": 64, "rarity": "Common",
-     "animation": "no", "emoji": "🟢"},
-    {"name": "Unknown V", "odds": 128, "rarity": "Uncommon",
-     "animation": "no", "emoji": "🟩"},
-    {"name": "Unknown VI", "odds": 264, "rarity": "Uncommon",
-     "animation": "yes", "emoji": "💠"},
-    {"name": "Unknown VII", "odds": 528, "rarity": "Uncommon",
-     "animation": "yes", "emoji": "🔷"},
-    {"name": "Unknown VIII", "odds": 1048, "rarity": "Rare",
-     "animation": "yes", "emoji": "💎"},
-    {"name": "Unknown IX", "odds": 2500, "rarity": "Rare",
-     "animation": "yes", "emoji": "🌠"},
-    {"name": "Unknown X", "odds": 5000, "rarity": "Rare",
-     "animation": "yes", "emoji": "🌀"},
-    {"name": "Unknown XI", "odds": 1000, "rarity": "Rare",
-     "animation": "yes", "emoji": "⚡"},
-    {"name": "Unknown XII", "odds": 25000, "rarity": "Legendary",
-     "animation": "super", "emoji": "👑"},
-    {"name": "Unknown XIII", "odds": 50000, "rarity": "Legendary",
-     "animation": "super", "emoji": "🔥"},
-    {"name": "Unknown XIV", "odds": 100000, "rarity": "Legendary",
-     "animation": "super", "emoji": "☄️"},
-    {"name": "Blackhole", "odds": 250000, "rarity": "Mythical",
-     "animation": "super", "emoji": "🌌"},
-    {"name": "Unknown XV", "odds": 500000, "rarity": "Mythical",
-     "animation": "super", "emoji": "🪐"},
-    {"name": "Unknown XVI", "odds": 1000000, "rarity": "Mythical",
-     "animation": "supersuper", "emoji": "♾️"},
+    {"name": "Roblox", "odds": 2, "rarity": "Common", "animation": "no", "emoji": "🟥"},
+    {"name": "Enrique", "odds": 4, "rarity": "Common", "animation": "no", "emoji": "🎵"},
+    {"name": "Unknown I", "odds": 8, "rarity": "Common", "animation": "no", "emoji": "⚪"},
+    {"name": "Unknown II", "odds": 16, "rarity": "Common", "animation": "no", "emoji": "🔹"},
+    {"name": "Unknown III", "odds": 32, "rarity": "Common", "animation": "no", "emoji": "🔸"},
+    {"name": "Unknown IV", "odds": 64, "rarity": "Common", "animation": "no", "emoji": "🟢"},
+    {"name": "Unknown V", "odds": 128, "rarity": "Uncommon", "animation": "no", "emoji": "🟩"},
+    {"name": "Unknown VI", "odds": 264, "rarity": "Uncommon", "animation": "yes", "emoji": "💠"},
+    {"name": "Unknown VII", "odds": 528, "rarity": "Uncommon", "animation": "yes", "emoji": "🔷"},
+    {"name": "Unknown VIII", "odds": 1048, "rarity": "Rare", "animation": "yes", "emoji": "💎"},
+    {"name": "Unknown IX", "odds": 2500, "rarity": "Rare", "animation": "yes", "emoji": "🌠"},
+    {"name": "Unknown X", "odds": 5000, "rarity": "Rare", "animation": "yes", "emoji": "🌀"},
+    {"name": "Unknown XI", "odds": 1000, "rarity": "Rare", "animation": "yes", "emoji": "⚡"},
+    {"name": "Unknown XII", "odds": 25000, "rarity": "Legendary", "animation": "super", "emoji": "👑"},
+    {"name": "Unknown XIII", "odds": 50000, "rarity": "Legendary", "animation": "super", "emoji": "🔥"},
+    {"name": "Unknown XIV", "odds": 100000, "rarity": "Legendary", "animation": "super", "emoji": "☄️"},
+    {"name": "Blackhole", "odds": 250000, "rarity": "Mythical", "animation": "super", "emoji": "🌌"},
+    {"name": "Unknown XV", "odds": 500000, "rarity": "Mythical", "animation": "super", "emoji": "🪐"},
+    {"name": "Unknown XVI", "odds": 1000000, "rarity": "Mythical", "animation": "supersuper", "emoji": "♾️"},
 ]
 
 RARITY_COLORS = {
@@ -175,6 +193,8 @@ defaults = {
     "thirst": 100.0,
     "survival_updated_at": time.time(),
     "game_over": False,
+    "admin_unlocked": False,
+    "luck_multiplier": 1,
     "stats": {
         "items_bought": 0,
         "spins": 0,
@@ -332,8 +352,10 @@ div.stButton > button:hover {
 def pretty_name(item):
     return item.replace("_", " ").title()
 
+
 def emoji_for(item):
     return INFO.get(item, ("📦", ""))[0]
+
 
 def buy_item(item, quantity):
     price, stock = st.session_state.shop[item]
@@ -354,8 +376,10 @@ def buy_item(item, quantity):
             "success", f"Bought {quantity} × {pretty_name(item)}!"
         )
 
+
 def use_item(item):
     quantity = st.session_state.inventory.get(item, 0)
+
     if quantity < 1:
         st.session_state.notice = ("error", "You don't own this item.")
         return
@@ -382,7 +406,119 @@ def use_item(item):
 
     if item in st.session_state.inventory and st.session_state.inventory[item] <= 0:
         del st.session_state.inventory[item]
+
     st.rerun()
+
+
+# ============================================================
+# ITEM POPUP
+# Streamlit's dialog creates a modal with a dimmed background.
+# ============================================================
+
+@st.dialog("🛍️ Item details", width="small")
+def show_item_dialog(item):
+    price, stock = st.session_state.shop[item]
+    emoji, description = INFO[item]
+
+    st.markdown(
+        f"<div style='text-align:center;font-size:70px'>{emoji}</div>",
+        unsafe_allow_html=True,
+    )
+    st.subheader(pretty_name(item))
+    st.write(description)
+    st.markdown(f"**Price:** €{price:,.2f}")
+    st.markdown(f"**Stock:** {stock}")
+
+    if stock <= 0:
+        st.error("Out of stock.")
+        return
+
+    quantity = st.number_input(
+        "Quantity",
+        min_value=1,
+        max_value=max(1, stock),
+        value=1,
+        key=f"modal_quantity_{item}",
+    )
+
+    st.markdown(f"**Total:** €{price * quantity:,.2f}")
+
+    if st.button("🛒 Buy item", key=f"modal_buy_{item}", use_container_width=True):
+        buy_item(item, quantity)
+        st.rerun()
+
+
+# ============================================================
+# ADMIN POPUP
+# ============================================================
+
+@st.dialog("🔐 Admin Panel", width="small")
+def show_admin_panel():
+    st.caption("Admin controls")
+
+    st.markdown("### 💰 Give yourself money")
+    amount = st.number_input(
+        "Amount to add (€)",
+        min_value=0.0,
+        max_value=100000000.0,
+        value=1000.0,
+        step=100.0,
+        key="admin_money_amount",
+    )
+
+    if st.button("💰 Add money", key="admin_add_money", use_container_width=True):
+        st.session_state.money = round(st.session_state.money + amount, 2)
+        st.session_state.notice = (
+            "success", f"Added €{amount:,.2f} to your balance!"
+        )
+        st.rerun()
+
+    st.divider()
+    st.markdown("### 🍀 Luck settings")
+
+    current_luck = int(st.session_state.luck_multiplier)
+    luck = st.slider(
+        "Luck multiplier",
+        min_value=1,
+        max_value=1000,
+        value=max(1, min(1000, current_luck)),
+        step=1,
+        key="admin_luck_slider",
+    )
+
+    st.caption(
+        "1× = normal luck. 100× makes the rare drops much more likely. "
+        "1000× gives an even bigger boost."
+    )
+
+    if st.button("✨ Apply luck", key="admin_apply_luck", use_container_width=True):
+        st.session_state.luck_multiplier = luck
+        st.session_state.notice = (
+            "success", f"Luck multiplier set to {luck}×!"
+        )
+        st.rerun()
+
+    st.divider()
+    st.markdown("### 📢 Global message")
+
+    message = st.text_area(
+        "Message everyone can see",
+        max_chars=300,
+        key="admin_global_message",
+        placeholder="Write your announcement here...",
+    )
+
+    if st.button("📢 Send to everyone", key="admin_send_message", use_container_width=True):
+        if message.strip():
+            send_global_message(message.strip())
+            st.session_state.admin_global_message = ""
+            st.session_state.notice = (
+                "success", "Global message sent!"
+            )
+            st.rerun()
+        else:
+            st.warning("Write a message first.")
+
 
 # ============================================================
 # ROLLS LOGIC
@@ -399,16 +535,23 @@ def perform_roll():
     st.session_state.rolls_spent += cost
     st.session_state.rolls_count += 1
 
-    # Check the rarest drops first.
-    # These are independent odds; the rarest successful check wins.
+    # Admin luck reduces the effective odds.
+    luck = max(1, int(st.session_state.get("luck_multiplier", 1)))
+
     result = None
+
+    # Check the rarest drops first.
     for item in sorted(ROLL_ITEMS, key=lambda x: x["odds"], reverse=True):
-        if random.randint(1, item["odds"]) == 1:
+        effective_odds = max(1, int(item["odds"] / luck))
+
+        if random.randint(1, effective_odds) == 1:
             result = item
             break
 
     if result is None:
-        result = random.choice([x for x in ROLL_ITEMS if x["rarity"] == "Common"])
+        result = random.choice([
+            x for x in ROLL_ITEMS if x["rarity"] == "Common"
+        ])
 
     name = result["name"]
     st.session_state.rolls_inventory[name] = (
@@ -416,6 +559,7 @@ def perform_roll():
     )
     st.session_state.last_roll = result.copy()
     st.session_state.notice = None
+
 
 def show_roll_reveal(item):
     rarity = item["rarity"]
@@ -455,6 +599,7 @@ def show_roll_reveal(item):
         ]
         reveal = st.empty()
         progress = st.progress(0)
+
         for i, stage in enumerate(stages):
             reveal.markdown(
                 f"""
@@ -468,9 +613,11 @@ def show_roll_reveal(item):
             )
             progress.progress(int((i + 1) / len(stages) * 100))
             time.sleep(1.2)
+
         st.balloons()
         st.snow()
         progress.empty()
+
 
 # ============================================================
 # NAVIGATION
@@ -478,13 +625,14 @@ def show_roll_reveal(item):
 
 page = st.sidebar.radio(
     "NAVIGATION",
-    ["Shop", "Gambling", "ROLLS", "Inventory", "Stats"],
+    ["Shop", "Gambling", "ROLLS", "Inventory", "Stats", "Codes"],
     format_func=lambda p: {
         "Shop": "🛍️   Shop",
         "Gambling": "🎰   Gambling",
         "ROLLS": "✨   ROLLS",
         "Inventory": "🎒   Inventory",
         "Stats": "📊   Stats",
+        "Codes": "🔑   Codes",
     }[p],
 )
 
@@ -498,27 +646,55 @@ st.sidebar.write(f"💧 Thirst — {int(st.session_state.thirst)}%")
 st.sidebar.progress(int(st.session_state.thirst))
 st.sidebar.caption("Food restores hunger. Drinks restore thirst.")
 
+# Current luck status
+st.sidebar.divider()
+st.sidebar.caption(f"🍀 Luck multiplier: {st.session_state.luck_multiplier}×")
+
+# ============================================================
+# GLOBAL MESSAGES
+# Visible to everyone, without a login.
+# ============================================================
+
+messages = get_global_messages(5)
+
+if messages:
+    with st.container(border=True):
+        st.markdown("### 📢 Global messages")
+
+        for message, created_at in reversed(messages):
+            st.info(message)
+            st.caption(time.strftime("%d-%m-%Y %H:%M", time.localtime(created_at)))
+
+# ============================================================
+# TOP STATUS
+# ============================================================
+
 top1, top2 = st.columns(2)
+
 with top1:
     st.caption(f"🍗 HUNGER · {int(st.session_state.hunger)}%")
     st.progress(int(st.session_state.hunger))
+
 with top2:
     st.caption(f"💧 THIRST · {int(st.session_state.thirst)}%")
     st.progress(int(st.session_state.thirst))
 
 if st.session_state.hunger < 25:
     st.warning("Your hunger is low! Buy food and use it in your inventory.")
+
 if st.session_state.thirst < 25:
     st.warning("Your thirst is low! Buy a drink and use it in your inventory.")
 
 if st.session_state.notice:
     kind, message = st.session_state.notice
+
     if kind == "success":
         st.success(message)
     elif kind == "error":
         st.error(message)
     else:
         st.info(message)
+
     st.session_state.notice = None
 
 # ============================================================
@@ -527,7 +703,11 @@ if st.session_state.notice:
 
 if st.session_state.game_over:
     st.title("☠️ GAME OVER")
-    st.error("Your character ran out of hunger or thirst, or triggered the fictional uranium game-over effect.")
+    st.error(
+        "Your character ran out of hunger or thirst, "
+        "or triggered the fictional uranium game-over effect."
+    )
+
     c1, c2, c3 = st.columns(3)
     c1.metric("Balance", f"€{st.session_state.money:,.2f}")
     c2.metric("Items bought", st.session_state.stats["items_bought"])
@@ -546,8 +726,11 @@ if st.session_state.game_over:
         st.session_state.game_over = False
         st.session_state.shop = {k: v.copy() for k, v in START_SHOP.items()}
         st.session_state.last_spin = None
+        st.session_state.luck_multiplier = 1
         st.session_state.stats = {
-            "items_bought": 0, "spins": 0, "money_earned": 0.0
+            "items_bought": 0,
+            "spins": 0,
+            "money_earned": 0.0,
         }
         st.rerun()
 
@@ -560,22 +743,39 @@ elif page == "Shop":
     st.title("🛍️ Shop")
     st.caption("Browse categories and click an item for details.")
 
-    query = st.text_input("Search items", placeholder="Try Bre, key, ura...").strip().casefold()
-    category_choice = st.selectbox("Category", ["All categories"] + list(CATEGORIES.keys()))
-    categories = CATEGORIES.items() if category_choice == "All categories" else [
-        (category_choice, CATEGORIES[category_choice])
-    ]
+    query = st.text_input(
+        "Search items",
+        placeholder="Try Bre, key, ura...",
+    ).strip().casefold()
+
+    category_choice = st.selectbox(
+        "Category",
+        ["All categories"] + list(CATEGORIES.keys()),
+    )
+
+    categories = (
+        CATEGORIES.items()
+        if category_choice == "All categories"
+        else [(category_choice, CATEGORIES[category_choice])]
+    )
 
     found = 0
+
     for category, items in categories:
-        filtered = [item for item in items if query in pretty_name(item).casefold()]
+        filtered = [
+            item for item in items
+            if query in pretty_name(item).casefold()
+        ]
+
         if not filtered:
             continue
+
         st.divider()
         st.subheader(category)
 
         for start in range(0, len(filtered), 3):
             columns = st.columns(3)
+
             for column, item in zip(columns, filtered[start:start + 3]):
                 found += 1
                 price, stock = st.session_state.shop[item]
@@ -591,30 +791,21 @@ elif page == "Shop":
                             """,
                             unsafe_allow_html=True,
                         )
-                        if st.button("View item ↗", key=f"view_{item}", use_container_width=True):
-                            st.session_state.selected_item = item
 
-                        if st.session_state.get("selected_item") == item:
-                            st.caption(INFO[item][1])
-                            quantity = st.number_input(
-                                "Quantity", min_value=1,
-                                max_value=max(1, stock), value=1,
-                                key=f"qty_{item}",
-                                disabled=stock == 0,
-                            )
-                            if stock == 0:
-                                st.error("Out of stock.")
-                            elif st.button("🛒 Buy item", key=f"buy_{item}", use_container_width=True):
-                                buy_item(item, quantity)
-                                st.session_state.selected_item = None
-                                st.rerun()
+                        if st.button(
+                            "View item ↗",
+                            key=f"view_{item}",
+                            use_container_width=True,
+                        ):
+                            show_item_dialog(item)
 
     if found == 0:
         st.info("No items found. Try another search.")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
-# GAMBLING - ORIGINAL MONEY MACHINE
+# GAMBLING
 # ============================================================
 
 elif page == "Gambling":
@@ -627,6 +818,7 @@ elif page == "Gambling":
     if st.button("🎰 SPIN — FREE", use_container_width=True):
         symbols = ["🍋", "🍒", "🍇", "🍉", "⭐", "💎", "🔔", "🍊"]
         final_symbols = [random.choice(symbols) for _ in range(3)]
+
         if random.random() < 0.025:
             final_symbols = ["🍋", "🍋", "🍋"]
 
@@ -636,17 +828,28 @@ elif page == "Gambling":
 
         while True:
             elapsed = time.time() - start_time
+
             for i, reel in enumerate(reels):
-                symbol = random.choice(symbols) if elapsed < stop_times[i] else final_symbols[i]
-                reel.markdown(f'<div class="slot">{symbol}</div>', unsafe_allow_html=True)
+                symbol = (
+                    random.choice(symbols)
+                    if elapsed < stop_times[i]
+                    else final_symbols[i]
+                )
+                reel.markdown(
+                    f'<div class="slot">{symbol}</div>',
+                    unsafe_allow_html=True,
+                )
+
             if elapsed >= 4.5:
                 break
+
             time.sleep(0.04)
 
         if final_symbols == ["🍋", "🍋", "🍋"]:
             reward = 1000
             st.markdown(
-                '<div class="jackpot"><h1>🍋 JACKPOT 🍋</h1><h2>+ €1,000</h2><h3>PERFECT MATCH!</h3></div>',
+                '<div class="jackpot"><h1>🍋 JACKPOT 🍋</h1>'
+                '<h2>+ €1,000</h2><h3>PERFECT MATCH!</h3></div>',
                 unsafe_allow_html=True,
             )
             st.balloons()
@@ -660,8 +863,14 @@ elif page == "Gambling":
         st.session_state.money = round(st.session_state.money + reward, 2)
         st.session_state.stats["money_earned"] += reward
         st.session_state.stats["spins"] += 1
-        st.session_state.last_spin = {"symbols": final_symbols, "reward": reward}
-        st.success(f"{' '.join(final_symbols)} — You won €{reward:,.2f}!")
+        st.session_state.last_spin = {
+            "symbols": final_symbols,
+            "reward": reward,
+        }
+
+        st.success(
+            f"{' '.join(final_symbols)} — You won €{reward:,.2f}!"
+        )
         st.metric("Updated balance", f"€{st.session_state.money:,.2f}")
 
     if st.session_state.last_spin:
@@ -672,11 +881,14 @@ elif page == "Gambling":
             + f" · €{st.session_state.last_spin['reward']:,.2f}"
         )
 
-    st.caption("🍋 🍋 🍋 = €1,000 · Other triple = €500 · Double = €100 · Other = €0")
+    st.caption(
+        "🍋 🍋 🍋 = €1,000 · Other triple = €500 · "
+        "Double = €100 · Other = €0"
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
-# ROLLS - RNG SYSTEM
+# ROLLS
 # ============================================================
 
 elif page == "ROLLS":
@@ -693,12 +905,14 @@ elif page == "ROLLS":
     st.markdown(
         '<div style="padding:24px;border:1px solid #8b5cf6;border-radius:18px;'
         'background:linear-gradient(120deg,#21143e,#101a30);text-align:center">'
-        '<h2>🎲 Ready to roll?</h2><p>Common → Uncommon → Rare → Legendary → Mythical</p>'
+        '<h2>🎲 Ready to roll?</h2>'
+        '<p>Common → Uncommon → Rare → Legendary → Mythical</p>'
         '</div>',
         unsafe_allow_html=True,
     )
 
     st.write("")
+
     if st.button("✨ ROLL NOW — €100", type="primary", use_container_width=True):
         if st.session_state.money < 100:
             st.error("Not enough money! You need €100.")
@@ -721,14 +935,17 @@ elif page == "ROLLS":
             f"<h3 style='color:{color}'>{rarity}</h3>",
             unsafe_allow_html=True,
         )
+
         for item in [x for x in ROLL_ITEMS if x["rarity"] == rarity]:
             owned = st.session_state.rolls_inventory.get(item["name"], 0)
+
             animation_label = {
                 "no": "",
                 "yes": " ✨",
                 "super": " 🌟",
                 "supersuper": " 🌌💥",
             }[item["animation"]]
+
             st.write(
                 f"{item['emoji']} **{item['name']}** — 1 in {item['odds']:,}"
                 f"{animation_label} · Owned: {owned}"
@@ -743,43 +960,68 @@ elif page == "ROLLS":
 elif page == "Inventory":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
     st.title("🎒 Inventory")
-    st.caption("Use food and drinks to survive. Your ROLLS drops are collected here too.")
+    st.caption(
+        "Use food and drinks to survive. "
+        "Your ROLLS drops are collected here too."
+    )
 
     if not st.session_state.inventory and not st.session_state.rolls_inventory:
         st.info("Your inventory is empty. Visit the shop or ROLLS.")
     else:
         if st.session_state.inventory:
             st.subheader("🛍️ Shop items")
+
             for item, quantity in list(st.session_state.inventory.items()):
                 if quantity <= 0:
                     continue
+
                 with st.container(border=True):
                     col1, col2, col3 = st.columns([1, 3, 1])
+
                     with col1:
-                        st.markdown(f"<div style='font-size:38px'>{emoji_for(item)}</div>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div style='font-size:38px'>{emoji_for(item)}</div>",
+                            unsafe_allow_html=True,
+                        )
+
                     with col2:
                         st.markdown(f"**{pretty_name(item)}**")
                         st.caption(INFO[item][1])
                         st.caption(f"Quantity: {quantity}")
+
                         if item in FOOD_ITEMS:
                             st.caption("🍗 Restores 35 hunger")
                         elif item in DRINK_ITEMS:
                             st.caption("💧 Restores 40 thirst")
+
                     with col3:
+                        button_label = (
+                            "Use"
+                            if item in FOOD_ITEMS
+                            or item in DRINK_ITEMS
+                            or item == "uranium"
+                            else "Inspect"
+                        )
+
                         if st.button(
-                            "Use" if item in FOOD_ITEMS or item in DRINK_ITEMS or item == "uranium" else "Inspect",
-                            key=f"use_{item}", use_container_width=True,
+                            button_label,
+                            key=f"use_{item}",
+                            use_container_width=True,
                         ):
                             use_item(item)
 
         st.divider()
         st.subheader("✨ ROLLS collection")
+
         if not st.session_state.rolls_inventory:
             st.caption("No ROLLS drops yet.")
+
         for item in ROLL_ITEMS:
             quantity = st.session_state.rolls_inventory.get(item["name"], 0)
+
             if quantity:
                 color = RARITY_COLORS[item["rarity"]]
+
                 st.markdown(
                     f"<div style='padding:12px;margin:6px 0;border:1px solid {color};"
                     f"border-radius:12px;background:#171329'>"
@@ -788,6 +1030,7 @@ elif page == "Inventory":
                     f" · 1 in {item['odds']:,} · Owned: {quantity}</div>",
                     unsafe_allow_html=True,
                 )
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
@@ -804,10 +1047,14 @@ elif page == "Stats":
 
     c3, c4 = st.columns(2)
     c3.metric("Gambling spins", st.session_state.stats["spins"])
-    c4.metric("Gambling earnings", f"€{st.session_state.stats['money_earned']:,.2f}")
+    c4.metric(
+        "Gambling earnings",
+        f"€{st.session_state.stats['money_earned']:,.2f}",
+    )
 
     st.divider()
     st.subheader("✨ ROLLS statistics")
+
     r1, r2, r3 = st.columns(3)
     r1.metric("Rolls made", st.session_state.rolls_count)
     r2.metric("Money spent", f"€{st.session_state.rolls_spent:,.2f}")
@@ -822,9 +1069,11 @@ elif page == "Stats":
 
     st.divider()
     st.subheader("Drop collection")
+
     if st.session_state.rolls_inventory:
         for item in ROLL_ITEMS:
             quantity = st.session_state.rolls_inventory.get(item["name"], 0)
+
             if quantity:
                 st.write(
                     f"{item['emoji']} {item['name']} × {quantity} "
@@ -832,5 +1081,47 @@ elif page == "Stats":
                 )
     else:
         st.caption("No ROLLS drops collected yet.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ============================================================
+# CODES + ADMIN
+# ============================================================
+
+elif page == "Codes":
+    st.markdown('<div class="page-content">', unsafe_allow_html=True)
+    st.title("🔑 Codes")
+    st.caption("Enter a code to unlock special features.")
+
+    code = st.text_input(
+        "Enter code",
+        type="password",
+        placeholder="Enter your code...",
+        key="code_entry",
+    )
+
+    if st.button("🎟️ Redeem code", use_container_width=True):
+        if code.strip() == "admin123":
+            st.session_state.admin_unlocked = True
+            st.success("Admin access unlocked!")
+        else:
+            st.error("Invalid code.")
+
+    st.divider()
+
+    if st.session_state.admin_unlocked:
+        st.success("🔓 Admin access is active.")
+        st.write("Open the admin panel to manage your game.")
+
+        if st.button("🔐 Open Admin Panel", use_container_width=True):
+            show_admin_panel()
+
+        if st.button("Log out of admin", use_container_width=True):
+            st.session_state.admin_unlocked = False
+            st.session_state.luck_multiplier = 1
+            st.success("Admin mode turned off.")
+            st.rerun()
+    else:
+        st.info("Redeem the admin code to unlock the admin panel.")
 
     st.markdown("</div>", unsafe_allow_html=True)
