@@ -21,7 +21,17 @@ html,body{margin:0;background:#080807;color:#eee6d5;font-family:Arial,sans-serif
 button,input{font:inherit}
 button{cursor:pointer}
 #app{max-width:1200px;margin:auto;padding:18px}
-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0 20px;border-bottom:1px solid #302b22}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0 16px;border-bottom:1px solid #302b22}
+.nav{display:flex;gap:7px;flex-wrap:wrap}
+.nav button{min-width:105px}
+.page{min-height:calc(100vh - 110px)}
+#codesPage{display:none}
+#codesPage .panel{margin-top:24px}
+#rollPage .scene{height:min(58vh,560px);min-height:360px}
+#event{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh}
+#eventCanvas{width:100%;height:100%}
+#eventName{max-width:96vw}
+@media(max-width:650px){.nav{width:100%}.nav button{flex:1;min-width:0;padding:11px 8px;letter-spacing:1px}#rollPage .scene{height:54vh;min-height:330px}}
 .logo{font-size:23px;font-weight:900;letter-spacing:6px}
 .logo small{display:block;font-size:9px;color:#9b8c72;letter-spacing:4px;margin-top:7px}
 button{background:#151410;color:#e9dfcd;border:1px solid #41392a;border-radius:4px;padding:12px 15px;font-size:11px;letter-spacing:2px}
@@ -96,13 +106,14 @@ footer{text-align:center;font-size:9px;letter-spacing:4px;color:#6f6656;padding:
 <div id="app">
 <header>
  <div class="logo">OBSCURA<small>AN ATLAS OF THE IMPOSSIBLE</small></div>
- <div>
-  <button id="rollTab" class="active">ROLL</button>
-  <button id="indexTab">AURA INDEX</button>
- </div>
+ <nav class="nav" aria-label="Main navigation">
+  <button id="rollTab" class="active">ROLLING</button>
+  <button id="indexTab">INDEX</button>
+  <button id="codesTab">CODES</button>
+ </nav>
 </header>
 
-<main id="rollPage">
+<main id="rollPage" class="page">
  <div class="scene" id="scene">
   <canvas id="world"></canvas>
   <div class="center">
@@ -139,19 +150,20 @@ footer{text-align:center;font-size:9px;letter-spacing:4px;color:#6f6656;padding:
  <div class="stats">
   <div class="stat"><label>TOTAL ROLLS</label><strong id="rollCount">0</strong></div>
   <div class="stat"><label>RAREST DISCOVERY</label><strong id="best">—</strong></div>
-  <div class="stat"><label>DISCOVERED</label><strong id="discovered">0 / 16</strong></div>
+  <div class="stat"><label>DISCOVERED</label><strong id="discovered">0 / 26</strong></div>
  </div>
  <p class="note">Discoveries are saved in this browser when local storage is available.</p>
 </main>
 
-<section class="section" id="indexPage" style="display:none">
+<section class="section page" id="indexPage" style="display:none">
  <h2>✦ THE AURA INDEX</h2>
  <p class="note">Undiscovered auras are hidden. Select a discovered aura to replay its animation.</p>
  <div class="index" id="index"></div>
  <button id="backBtn" style="margin-top:14px">← BACK TO ROLL</button>
 </section>
 
-<section class="panel">
+<section class="page" id="codesPage" style="display:none">
+ <div class="panel">
  <h2>✦ SECRET CODES</h2>
  <p class="note">Enter a secret code to unlock hidden discoveries.</p>
  <form id="codeForm">
@@ -161,6 +173,7 @@ footer{text-align:center;font-size:9px;letter-spacing:4px;color:#6f6656;padding:
   </div>
  </form>
  <div id="message" aria-live="polite"></div>
+ </div>
 </section>
 <footer>OBSCURA · EVERY DISCOVERY HAS A STORY</footer>
 </div>
@@ -280,20 +293,25 @@ function render(){
   card.append(tier,name,odds,replay);
   card.onclick=()=>{
    if(!owned){toast("Deze aura is nog niet ontdekt.");return;}
-   showPage("roll");playReveal(a,true);
+   showPage("roll");
+   window.scrollTo({top:0,behavior:"instant"});
+   playReveal(a,true);
   };
   root.appendChild(card);
  }
 }
 function showPage(p){
- const roll=p==="roll";
- $("rollPage").style.display=roll?"block":"none";
- $("indexPage").style.display=roll?"none":"block";
- $("rollTab").classList.toggle("active",roll);
- $("indexTab").classList.toggle("active",!roll);
+ const pages={roll:"rollPage",index:"indexPage",codes:"codesPage"};
+ for(const [key,id] of Object.entries(pages)) $(id).style.display=key===p?(key==="roll"?"block":"block"):"none";
+ $("rollTab").classList.toggle("active",p==="roll");
+ $("indexTab").classList.toggle("active",p==="index");
+ $("codesTab").classList.toggle("active",p==="codes");
+ // Keep navigation predictable: changing tabs always returns to the top of the app.
+ window.scrollTo({top:0,behavior:"instant"});
 }
 $("rollTab").onclick=()=>showPage("roll");
 $("indexTab").onclick=()=>showPage("index");
+$("codesTab").onclick=()=>showPage("codes");
 $("openIndex").onclick=()=>showPage("index");
 $("backBtn").onclick=()=>showPage("roll");
 
@@ -514,6 +532,33 @@ function draw(now){
    const glow=ex.createRadialGradient(cx2,cy2,1,cx2,cy2,limit*(.35+p*.8));
    glow.addColorStop(0,color(a.color,.2+p*.22));glow.addColorStop(1,"rgba(0,0,0,0)");
    ex.fillStyle=glow;ex.fillRect(0,0,EW,EH);
+   // Rare and ultra-rare auras get full-screen multicolour streaks, not just a centered symbol.
+   if(a.odds>=1000){
+    const palette=a.odds>=100000?[a.color,"#ffffff","#8e78ff","#54e7ff","#ff70d6","#ffd66b"]:[a.color,"#ffffff","#68e7ff","#ff78c8"];
+    const streakCount=a.odds>=100000?42:20;
+    ex.save();ex.globalCompositeOperation="lighter";
+    for(let i=0;i<streakCount;i++){
+     const lane=(i*97.31+(i%3)*41)%EH;
+     const speed=(a.odds>=100000?520:360)+(i%7)*55;
+     const travel=(now/1000*speed+i*137)%(EW+360)-180;
+     const y=(lane+Math.sin(t*1.7+i*2.1)*EH*.07+EH)%(EH);
+     const len=(a.odds>=100000?180:100)+(i%5)*38;
+     const col=palette[i%palette.length];
+     ex.strokeStyle=color(col,a.odds>=100000?.78:.5);ex.lineWidth=i%6===0?2.4:1;
+     ex.shadowColor=col;ex.shadowBlur=a.odds>=100000?16:8;
+     ex.beginPath();ex.moveTo(travel-len,y+Math.sin(t*2+i)*28);ex.lineTo(travel,y);ex.lineTo(travel+len*.12,y+Math.cos(t*1.4+i)*8);ex.stroke();
+    }
+    ex.shadowBlur=0;
+    // Chromatic diagonal cuts sweep across the entire screen on the rarest rolls.
+    if(a.odds>=100000){
+     for(let j=0;j<7;j++){
+      const offset=((t*(240+j*27)+j*EW/7)%(EW+EH))-EH*.25;
+      ex.strokeStyle=color(palette[(j+2)%palette.length],.22);ex.lineWidth=1+(j%3);
+      ex.beginPath();ex.moveTo(offset,0);ex.lineTo(offset-EH*.65,EH);ex.stroke();
+     }
+    }
+    ex.restore();
+   }
    ex.save();ex.translate(cx2,cy2);
    const spin=t*(a.odds>=100000?-.65:.35),style=a.style;
    ex.strokeStyle=color(a.color,.8);ex.fillStyle=color(a.color,.16);ex.lineWidth=1.5;
