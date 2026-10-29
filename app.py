@@ -39,6 +39,13 @@ canvas{position:absolute;inset:0;width:100%;height:100%}
 #hint{font-size:10px;letter-spacing:3px;color:#847b6b;margin-top:32px}
 #event{display:none;position:absolute;inset:0;z-index:5;align-items:center;justify-content:center;text-align:center;flex-direction:column;overflow:hidden;background:#030303}
 #event.show{display:flex}
+.scene.revealing > .center{visibility:hidden}
+#event{background:#030303}
+#eventName{line-height:1.05;text-wrap:balance}
+#introTitle{ text-shadow:0 0 35px #c6a76d,0 0 90px #c6a76d55; transform:translateY(12px) scale(.94); transition:transform 1.2s,opacity 1s}
+#introSub{transition:opacity 1s}
+#introProgress{box-shadow:0 0 18px #c6a76d55}
+.scene.revealing #event{background:#030303}
 #eventCanvas{z-index:0}
 .eventText{position:relative;z-index:2;padding:18px}
 #eventLabel{font-size:10px;letter-spacing:6px;color:#c6ad7b}
@@ -115,9 +122,9 @@ footer{text-align:center;font-size:9px;letter-spacing:4px;color:#6f6656;padding:
   <div id="intro">
    <canvas id="introCanvas"></canvas>
    <div class="introText">
-    <div class="kicker">AN UNKNOWN WORLD</div>
+    <div class="kicker">REALITY // INITIALIZING</div>
     <div id="introTitle">OBSCURA</div>
-    <div id="introSub">YOUR DESTINY HAS NOT BEEN WRITTEN</div>
+    <div id="introSub">THE VEIL IS OPENING</div>
     <div id="introProgress"><div id="introBar"></div></div>
    </div>
   </div>
@@ -163,22 +170,32 @@ footer{text-align:center;font-size:9px;letter-spacing:4px;color:#6f6656;padding:
 "use strict";
 
 const AURAS = [
- {id:"ash",name:"ASHEN",odds:2,color:"#b8b0a0",tier:"COMMON",time:5000},
- {id:"tide",name:"ABYSSAL TIDE",odds:8,color:"#347e83",tier:"UNCOMMON",time:5000},
- {id:"blood",name:"RED HARVEST",odds:40,color:"#9e302b",tier:"RARE",time:5500},
- {id:"moss",name:"HOLLOW GARDEN",odds:100,color:"#73845a",tier:"RARE",time:5500},
- {id:"glass",name:"BROKEN GLASS",odds:250,color:"#a5b8bd",tier:"EPIC",time:6000},
- {id:"sun",name:"DYNASTY OF GOLD",odds:500,color:"#c49a50",tier:"EPIC",time:6000},
- {id:"ember",name:"EMBER CROWN",odds:1000,color:"#c76b3d",tier:"LEGENDARY",time:6500},
- {id:"eclipse",name:"BLACK ECLIPSE",odds:2500,color:"#8d7770",tier:"LEGENDARY",time:7000},
- {id:"winter",name:"LAST WINTER",odds:7500,color:"#c2d1d0",tier:"MYTHIC",time:7500},
- {id:"saint",name:"PALE SAINT",odds:25000,color:"#e3ddc7",tier:"MYTHIC",time:8000},
- {id:"null",name:"NULL SOVEREIGN",odds:100000,color:"#9d80a5",tier:"TRANSCENDENT",time:8500},
- {id:"marrow",name:"MARROW KING",odds:150000,color:"#c3b9a6",tier:"TRANSCENDENT",time:8500},
- {id:"starless",name:"STARLESS SEA",odds:300000,color:"#7a899e",tier:"COSMIC",time:9000},
- {id:"seraph",name:"FALLEN SERAPH",odds:500000,color:"#bd927c",tier:"COSMIC",time:9500},
- {id:"origin",name:"THE FIRST LIGHT",odds:1000000,color:"#f1e4b7",tier:"IMPOSSIBLE",time:10000},
- {id:"end",name:"THE END OF ALL",odds:1000000,color:"#ffffff",tier:"ETERNAL",time:10000}
+ {id:"ash",name:"ASHEN",odds:2,color:"#b8b0a0",tier:"COMMON",time:900,style:"ash"},
+ {id:"tide",name:"ABYSSAL TIDE",odds:8,color:"#347eae",tier:"UNCOMMON",time:1200,style:"tide"},
+ {id:"blood",name:"RED HARVEST",odds:40,color:"#d32f3f",tier:"RARE",time:1600,style:"blood"},
+ {id:"moss",name:"HOLLOW GARDEN",odds:100,color:"#73845a",tier:"RARE",time:1800,style:"moss"},
+ {id:"glass",name:"BROKEN GLASS",odds:250,color:"#a5dce8",tier:"EPIC",time:2200,style:"glass"},
+ {id:"sun",name:"DYNASTY OF GOLD",odds:500,color:"#e8b94f",tier:"EPIC",time:2400,style:"sun"},
+ {id:"ember",name:"EMBER CROWN",odds:1000,color:"#ff642e",tier:"LEGENDARY",time:2900,style:"ember"},
+ {id:"eclipse",name:"BLACK ECLIPSE",odds:2500,color:"#9c78b7",tier:"LEGENDARY",time:3200,style:"eclipse"},
+ {id:"winter",name:"LAST WINTER",odds:7500,color:"#c2f4ff",tier:"MYTHIC",time:3800,style:"winter"},
+ {id:"saint",name:"PALE SAINT",odds:25000,color:"#fff0ce",tier:"MYTHIC",time:4200,style:"saint"},
+ {id:"null",name:"NULL SOVEREIGN",odds:100000,color:"#b67bff",tier:"TRANSCENDENT",time:5000,style:"null"},
+ {id:"marrow",name:"MARROW KING",odds:150000,color:"#d6c4a8",tier:"TRANSCENDENT",time:5300,style:"marrow"},
+ {id:"starless",name:"STARLESS SEA",odds:300000,color:"#7a9dff",tier:"COSMIC",time:6000,style:"starless"},
+ {id:"seraph",name:"FALLEN SERAPH",odds:500000,color:"#ffb6d5",tier:"COSMIC",time:6500,style:"seraph"},
+ {id:"origin",name:"THE FIRST LIGHT",odds:1000000,color:"#fff5b7",tier:"IMPOSSIBLE",time:7500,style:"origin"},
+ {id:"end",name:"THE END OF ALL",odds:2000000,color:"#ffffff",tier:"ETERNAL",time:8000,style:"end"},
+ {id:"storm",name:"THUNDER VEIL",odds:120,color:"#7b9dff",tier:"RARE",time:1900,style:"storm"},
+ {id:"crystal",name:"PRISMATIC HEART",odds:350,color:"#ff8de1",tier:"EPIC",time:2300,style:"crystal"},
+ {id:"phantom",name:"PHANTOM STEP",odds:800,color:"#9b8cff",tier:"EPIC",time:2500,style:"phantom"},
+ {id:"inferno",name:"INFERNAL ENGINE",odds:1800,color:"#ff4c16",tier:"LEGENDARY",time:3000,style:"inferno"},
+ {id:"moon",name:"MOONVEIL",odds:6000,color:"#b8c8ff",tier:"MYTHIC",time:3600,style:"moon"},
+ {id:"venom",name:"VENOM BLOOM",odds:14000,color:"#74ff91",tier:"MYTHIC",time:4000,style:"venom"},
+ {id:"oracle",name:"THE ORACLE",odds:60000,color:"#ffdc8a",tier:"TRANSCENDENT",time:4700,style:"oracle"},
+ {id:"rift",name:"RIFT WALKER",odds:180000,color:"#ff70e8",tier:"TRANSCENDENT",time:5500,style:"rift"},
+ {id:"nebula",name:"NEBULA WRAITH",odds:400000,color:"#8e78ff",tier:"COSMIC",time:6200,style:"nebula"},
+ {id:"zenith",name:"ZENITH ZERO",odds:1500000,color:"#d7ffff",tier:"ETERNAL",time:7800,style:"zenith"}
 ];
 
 const $=id=>document.getElementById(id);
@@ -308,6 +325,7 @@ function playReveal(a,replay){
  if(rolling)return;
  const myToken=++token;
  current=a;setBusy(true);
+ scene.classList.add("revealing");
  $("event").classList.add("show");
  // Important: canvases were hidden before this point. Recalculate their size.
  resize();
@@ -316,9 +334,9 @@ function playReveal(a,replay){
  $("eventSub").textContent="ENERGY CONVERGENCE";
  $("eventName").style.color=a.color;
  $("event").style.background="#030303";
- sequence={a,start:performance.now(),duration:reduced?1200:a.time,
+ sequence={a,start:performance.now(),duration:reduced?Math.min(900,a.time):a.time,
   token:myToken,replay,done:false,stage:-1};
- burst(W/2,H/2,a.color,90,1.3);addRing(a.color,4);
+ burst(W/2,H/2,a.color,a.odds>=100000?180:45,a.odds>=100000?2:0.8);addRing(a.color,a.odds>=100000?7:2);
  requestAnimationFrame(updateSequence);
 }
 function complete(s){
@@ -328,10 +346,10 @@ function complete(s){
  $("eventSub").textContent="1 IN "+s.a.odds.toLocaleString()+" · "+s.a.tier;
  $("event").style.background=
   "radial-gradient(ellipse at center,"+color(s.a.color,.16)+",#030303 70%)";
- flash=s.a.odds>=100000?.9:.35;
- burst(W/2,H/2,s.a.color,s.a.odds>=100000?550:200,
-  s.a.odds>=100000?3:1.5);
- for(let i=0;i<(s.a.odds>=100000?16:6);i++)addRing(s.a.color,s.a.odds>=100000?8:4);
+ flash=s.a.odds>=100000?.8:(s.a.odds>=1000?.35:.12);
+ burst(W/2,H/2,s.a.color,s.a.odds>=100000?420:(s.a.odds>=1000?150:55),
+  s.a.odds>=100000?2.8:(s.a.odds>=1000?1.5:.7));
+ for(let i=0;i<(s.a.odds>=100000?14:(s.a.odds>=1000?6:2));i++)addRing(s.a.color,s.a.odds>=100000?7:(s.a.odds>=1000?4:2));
  $("eventName").animate([
   {opacity:0,transform:"scale(.05)",filter:"blur(20px)"},
   {opacity:1,transform:"scale(1.12)",filter:"blur(0)",offset:.75},
@@ -356,23 +374,18 @@ function complete(s){
 function updateSequence(now){
  const s=sequence;
  if(!s||s.done||s.token!==token)return;
- const p=Math.min(1,(now-s.start)/s.duration);
- const a=s.a;
- let label,sub;
- if(p<.2){label="SOMETHING STIRS IN THE DARK";sub="SIGNAL DETECTED";}
- else if(p<.48){label="THE BOUNDARIES ARE BREAKING";sub="ENERGY CONVERGENCE";}
- else if(p<.76){label=a.odds>=100000?"AN IMPOSSIBLE PRESENCE":"A NEW PRESENCE";sub="REALITY IS BECOMING UNSTABLE";}
- else{label="FINAL SEQUENCE";sub="PREPARE FOR REVELATION";}
- $("eventLabel").textContent=label;$("eventSub").textContent=sub;
- for(let i=0;i<2+Math.floor(p*9);i++){
+ const p=Math.min(1,(now-s.start)/s.duration),a=s.a;
+ if(p<.28){$("eventLabel").textContent="ANOMALY DETECTED";$("eventSub").textContent="REALITY IS RESPONDING";}
+ else if(p<.62){$("eventLabel").textContent=a.odds>=100000?"A COSMIC PRESENCE AWAKENS":"AURA FORMING";$("eventSub").textContent="ENERGY CONVERGENCE";}
+ else{$("eventLabel").textContent="REVEAL IMMINENT";$("eventSub").textContent="PREPARE FOR DISCOVERY";}
+ const amount=a.odds>=100000?8:(a.odds>=1000?5:2);
+ for(let i=0;i<amount;i++){
   const angle=Math.random()*Math.PI*2;
   const r=(.1+Math.random()*.55)*Math.min(W,H);
   const x=W/2+Math.cos(angle)*r,y=H/2+Math.sin(angle)*r;
-  particles.push({x,y,vx:(W/2-x)*(.012+p*.025),
-   vy:(H/2-y)*(.012+p*.025),life:24+Math.random()*35,
-   size:1+Math.random()*3,col:a.color});
+  particles.push({x,y,vx:(W/2-x)*(.009+p*.035),vy:(H/2-y)*(.009+p*.035),life:18+Math.random()*30,size:1+Math.random()*(a.odds>=1000?3:1.5),col:a.color});
  }
- if(Math.random()<.25)addRing(a.color,2+p*7);
+ if(Math.random()<(a.odds>=100000?.6:.18))addRing(a.color,(a.odds>=1000?5:2)+p*5);
  if(p>=1){complete(s);return;}
  requestAnimationFrame(updateSequence);
 }
@@ -394,27 +407,39 @@ function draw(now){
  }
  ctx.globalAlpha=1;
 
- // Opening sequence: seven seconds of slowly unfolding light.
+ // Cinematic 8-second intro: collapsing star field, rotating sigils and a portal opening.
  const elapsed=now-introStart;
- const intro=Math.min(1,elapsed/(reduced?1000:7000));
- ix.clearRect(0,0,W,H);
- ix.fillStyle="#030303";ix.fillRect(0,0,W,H);
- for(let i=0;i<85;i++){
-  const a=i*2.399+t*.07;
-  const r=(intro*intro)*Math.min(W,H)*.48*(i/85);
-  ix.fillStyle=color("#c5a66b",.1+intro*.4);
-  ix.beginPath();ix.arc(W/2+Math.cos(a)*r,H/2+Math.sin(a)*r,1+(i%3),0,6.283);ix.fill();
+ const intro=Math.min(1,elapsed/(reduced?900:8000));
+ ix.clearRect(0,0,W,H);ix.fillStyle="#020204";ix.fillRect(0,0,W,H);
+ const portal=Math.max(0,Math.min(1,(intro-.12)/.78));
+ const pulse=1+Math.sin(t*2.2)*.035;
+ ix.save();ix.translate(W/2,H/2);ix.rotate(t*.12);
+ for(let ring=0;ring<5;ring++){
+  const rr=(Math.min(W,H)*(.08+portal*.44*(ring/5+.15)))*pulse;
+  ix.beginPath();ix.ellipse(0,0,rr,rr*(.52+ring*.07),0,0,Math.PI*2);
+  ix.strokeStyle=color(ring%2?"#8e6ee8":"#d9bd7b",.18+portal*.45);ix.lineWidth=ring===0?2:1;ix.stroke();
  }
- ix.save();ix.translate(W/2,H/2);ix.rotate(-.1);
- const seam=2+intro*W*.8;
+ for(let i=0;i<96;i++){
+  const a=i*2.399+t*(i%2?.08:-.04),r=(Math.min(W,H)*(.04+portal*.47))*((i%17+1)/18);
+  const x=Math.cos(a)*r,y=Math.sin(a)*r;
+  ix.fillStyle=color(i%3===0?"#fff0c9":"#bda7ff",.18+portal*.72);
+  ix.beginPath();ix.arc(x,y,(i%5===0?2.1:0.8)+portal,0,Math.PI*2);ix.fill();
+ }
+ // Bright vertical rift that opens near the end of the intro.
+ const seam=(2+Math.pow(portal,2)*W*.9);
  const grad=ix.createLinearGradient(-seam/2,0,seam/2,0);
- grad.addColorStop(0,"#c6a76b00");grad.addColorStop(.45,"#c6a76b77");
- grad.addColorStop(.5,"#fff0c9");grad.addColorStop(.55,"#c6a76b77");
- grad.addColorStop(1,"#c6a76b00");
+ grad.addColorStop(0,"rgba(190,160,255,0)");grad.addColorStop(.43,"rgba(198,167,109,.2)");
+ grad.addColorStop(.5,"rgba(255,250,226,.95)");grad.addColorStop(.57,"rgba(198,167,109,.2)");grad.addColorStop(1,"rgba(190,160,255,0)");
  ix.fillStyle=grad;ix.fillRect(-seam/2,-H,seam,H*2);ix.restore();
+ // Lens-flare beam sweeps across the portal.
+ ix.save();ix.translate(W/2,H/2);ix.rotate(-.18+Math.sin(t*.45)*.12);
+ const beamW=W*(.1+intro*.9),beam=ix.createLinearGradient(-beamW/2,0,beamW/2,0);
+ beam.addColorStop(0,"rgba(255,220,150,0)");beam.addColorStop(.5,"rgba(255,238,190,"+(intro*.18)+")");beam.addColorStop(1,"rgba(255,220,150,0)");
+ ix.fillStyle=beam;ix.fillRect(-beamW/2,-H*.6,beamW,H*1.2);ix.restore();
 
  if(!introDone){
-  $("introTitle").style.opacity=String(Math.max(0,Math.min(1,(intro-.25)*2)));
+  $("introTitle").style.opacity=String(Math.max(0,Math.min(1,(intro-.18)*2)));
+  $("introTitle").style.transform="translateY("+(12-intro*12)+"px) scale("+(.94+intro*.06)+")";
   $("introSub").style.opacity=String(Math.max(0,Math.min(1,(intro-.48)*2)));
   $("introBar").style.width=(intro*100)+"%";
   if(intro>=1){
@@ -462,34 +487,68 @@ function draw(now){
   if(flash<.015){flash=0;$("flash").style.opacity="0";}
  }
 
- // Full-screen reveal background effects.
+ // Aura-specific reveal effects: each style has its own silhouette/motion language.
  if($("event").classList.contains("show")){
   ex.clearRect(0,0,W,H);
   const s=sequence;
   if(s){
-   const p=Math.min(1,(now-s.start)/s.duration);
-   const a=s.a;
-   const eg=ex.createRadialGradient(W/2,H/2,1,W/2,H/2,
-    Math.min(W,H)*(.1+p*.8));
-   eg.addColorStop(0,color(a.color,.22));eg.addColorStop(1,"#030303");
-   ex.fillStyle=eg;ex.fillRect(0,0,W,H);
-   for(let i=0;i<12;i++){
-    const rr=((p*1.3+i/12)%1)*Math.max(W,H)*.7;
-    ex.strokeStyle=color(a.color,(1-rr/(Math.max(W,H)*.8))*.4);
-    ex.beginPath();ex.arc(W/2,H/2,rr,0,6.283);ex.stroke();
+   const p=Math.min(1,(now-s.start)/s.duration),a=s.a,cx2=W/2,cy2=H/2,limit=Math.min(W,H)*.46;
+   // Always paint an opaque backdrop: prevents the aura text behind this layer appearing twice.
+   ex.fillStyle="#030306";ex.fillRect(0,0,W,H);
+   const glow=ex.createRadialGradient(cx2,cy2,1,cx2,cy2,limit*(.35+p*.8));
+   glow.addColorStop(0,color(a.color,.2+p*.22));glow.addColorStop(1,"rgba(0,0,0,0)");
+   ex.fillStyle=glow;ex.fillRect(0,0,W,H);
+   ex.save();ex.translate(cx2,cy2);
+   const spin=t*(a.odds>=100000?-.65:.35),style=a.style;
+   ex.strokeStyle=color(a.color,.8);ex.fillStyle=color(a.color,.16);ex.lineWidth=1.5;
+   const line=(x1,y1,x2,y2,alpha=1)=>{ex.globalAlpha=alpha;ex.beginPath();ex.moveTo(x1,y1);ex.lineTo(x2,y2);ex.stroke();ex.globalAlpha=1;};
+   const polygon=(n,r1,r2,rot=0)=>{ex.beginPath();for(let i=0;i<n*2;i++){const an=rot+i*Math.PI/n,rr=i%2===0?r1:r2,x=Math.cos(an)*rr,y=Math.sin(an)*rr;if(i===0)ex.moveTo(x,y);else ex.lineTo(x,y);}ex.closePath();ex.stroke();};
+   const circle=(r,alpha=1)=>{ex.globalAlpha=alpha;ex.beginPath();ex.arc(0,0,r,0,Math.PI*2);ex.stroke();ex.globalAlpha=1;};
+   if(style==="ash"){
+    for(let i=0;i<34;i++){const an=i*2.4+t*(.2+i%2*.15),r=limit*(.1+((i*17+p*90)%100)/120);ex.fillStyle=color(a.color,.7);ex.beginPath();ex.arc(Math.cos(an)*r,Math.sin(an)*r,1+(i%3),0,7);ex.fill();}
+   }else if(style==="tide"){
+    for(let i=0;i<7;i++){ex.beginPath();for(let j=0;j<=90;j++){const an=j/90*Math.PI*2,r=limit*(.12+i*.1)+Math.sin(an*4+t*2+i)*9;const x=Math.cos(an+t*.2)*r,y=Math.sin(an+t*.2)*r;if(j===0)ex.moveTo(x,y);else ex.lineTo(x,y);}ex.stroke();}
+   }else if(style==="blood"||style==="inferno"){
+    for(let i=0;i<42;i++){const an=i*2.399+t*(style==="inferno"?1.4:.5),r=limit*(.15+((i*13+p*80)%100)/120);line(Math.cos(an)*r,Math.sin(an)*r,Math.cos(an)*Math.max(0,r-18-p*50),Math.sin(an)*Math.max(0,r-18-p*50),.8);}
+    polygon(8,limit*(.2+p*.35),limit*.12,spin);
+   }else if(style==="moss"||style==="venom"){
+    for(let i=0;i<12;i++){const an=i*Math.PI/6+spin,r=limit*(.15+p*.3);ex.beginPath();ex.ellipse(Math.cos(an)*r*.35,Math.sin(an)*r*.35,limit*.09,limit*.23,an,0,Math.PI*2);ex.stroke();}
+   }else if(style==="glass"||style==="crystal"){
+    for(let i=0;i<13;i++){const an=i*2.399+spin,r=limit*(.15+(i%4)*.13);ex.beginPath();ex.moveTo(Math.cos(an)*r,Math.sin(an)*r);ex.lineTo(Math.cos(an+.22)*(r+20+p*25),Math.sin(an+.22)*(r+20+p*25));ex.lineTo(Math.cos(an-.17)*(r+8),Math.sin(an-.17)*(r+8));ex.closePath();ex.stroke();}
+   }else if(style==="sun"||style==="saint"||style==="oracle"||style==="origin"){
+    for(let i=0;i<48;i++){const an=i*Math.PI/24+spin,inner=limit*(.12+(i%3)*.035),outer=limit*(.35+p*.45);line(Math.cos(an)*inner,Math.sin(an)*inner,Math.cos(an)*outer,Math.sin(an)*outer,.3+(i%3)*.2);}
+    circle(limit*(.18+p*.2));circle(limit*(.32+p*.25),.55);polygon(12,limit*(.3+p*.15),limit*.22,spin);
+   }else if(style==="ember"){
+    for(let i=0;i<26;i++){const an=i*2.4+t*.7,r=limit*(.15+((i*11+p*120)%100)/130);ex.beginPath();ex.moveTo(Math.cos(an)*r,Math.sin(an)*r);ex.quadraticCurveTo(Math.cos(an+.5)*(r+18),Math.sin(an+.5)*(r+18),Math.cos(an+.15)*(r+38+p*25),Math.sin(an+.15)*(r+38+p*25));ex.stroke();}
+    polygon(3,limit*(.25+p*.3),limit*.1,spin);
+   }else if(style==="eclipse"||style==="null"||style==="end"||style==="rift"){
+    circle(limit*(.12+p*.12),1);ex.fillStyle="#030306";ex.beginPath();ex.arc(0,0,limit*(.1+p*.13),0,7);ex.fill();
+    for(let i=0;i<5;i++){ex.save();ex.rotate(spin*(i%2?-1:1)+i);ex.beginPath();ex.ellipse(0,0,limit*(.22+i*.055),limit*(.08+i*.018),0,0,Math.PI*2);ex.stroke();ex.restore();}
+    polygon(10,limit*(.3+p*.25),limit*.16,spin);
+   }else if(style==="winter"||style==="moon"){
+    for(let i=0;i<8;i++){const an=i*Math.PI/4+spin,r=limit*(.12+p*.25);line(Math.cos(an)*r*.2,Math.sin(an)*r*.2,Math.cos(an)*r,Math.sin(an)*r);line(Math.cos(an)*r*.65,Math.sin(an)*r*.65,Math.cos(an+.28)*r*.8,Math.sin(an+.28)*r*.8);line(Math.cos(an)*r*.65,Math.sin(an)*r*.65,Math.cos(an-.28)*r*.8,Math.sin(an-.28)*r*.8);}
+    circle(limit*(.22+p*.22));
+   }else if(style==="marrow"||style==="phantom"){
+    for(let i=0;i<9;i++){const an=i*Math.PI*2/9+spin,r=limit*(.2+p*.2);ex.beginPath();ex.ellipse(Math.cos(an)*r*.5,Math.sin(an)*r*.5,limit*.1,limit*.27,an,0,Math.PI*2);ex.stroke();}
+    polygon(9,limit*(.28+p*.16),limit*.08,-spin);
+   }else if(style==="starless"||style==="nebula"||style==="zenith"){
+    for(let i=0;i<7;i++){ex.save();ex.rotate(spin*(i%2?-.6:1)+i*.4);ex.beginPath();ex.ellipse(0,0,limit*(.12+i*.045),limit*(.08+i*.025),0,0,Math.PI*2);ex.stroke();ex.restore();}
+    for(let i=0;i<65;i++){const an=i*2.399+t*.08,r=limit*(.08+((i*29)%100)/120);ex.fillStyle=color(a.color,.35+(i%4)*.15);ex.fillRect(Math.cos(an)*r,Math.sin(an)*r,1.5,1.5);}
+   }else if(style==="seraph"){
+    for(let side of [-1,1]){ex.save();ex.scale(side,1);ex.beginPath();ex.moveTo(0,0);ex.bezierCurveTo(limit*.12,-limit*.05,limit*.18,-limit*.6,limit*.55,-limit*.42);ex.bezierCurveTo(limit*.38,-limit*.15,limit*.25,limit*.08,0,0);ex.stroke();for(let i=1;i<7;i++)line(limit*.06*i,-limit*.06*i,limit*.08*i,-limit*(.12+i*.045));ex.restore();}
+    circle(limit*.16);
+   }else if(style==="storm"){
+    for(let i=0;i<7;i++){const an=i*.9+t*.2;ex.beginPath();ex.moveTo(Math.cos(an)*limit*.1,Math.sin(an)*limit*.1);for(let j=1;j<7;j++){const r=limit*(.1+j*.07),aa=an+(Math.random()-.5)*.55;ex.lineTo(Math.cos(aa)*r,Math.sin(aa)*r);}ex.stroke();}
+   }else{
+    circle(limit*(.2+p*.2));polygon(8,limit*(.3+p*.2),limit*.1,spin);
    }
-   ex.save();ex.translate(W/2,H/2);ex.rotate(t*.2);
-   const points=a.odds>=100000?18:10,outer=15+p*110;
-   ex.beginPath();
-   for(let i=0;i<points*2;i++){
-    const angle=i*Math.PI/points,rr=i%2===0?outer:outer*.25;
-    const x=Math.cos(angle)*rr,y=Math.sin(angle)*rr;
-    if(i===0)ex.moveTo(x,y);else ex.lineTo(x,y);
-   }
-   ex.closePath();ex.strokeStyle=color(a.color,.8);ex.lineWidth=1.5;ex.stroke();
+   // Tiny sparks drift outward for every aura, but the main shape is unique.
+   const sparks=a.odds>=100000?36:12;
+   for(let i=0;i<sparks;i++){const an=i*2.399+t*(i%2?.25:-.18),r=limit*(.15+((i*19+p*70)%100)/115);ex.fillStyle=color(a.color,.5);ex.beginPath();ex.arc(Math.cos(an)*r,Math.sin(an)*r,1+(i%3),0,Math.PI*2);ex.fill();}
    ex.restore();
   }
  }
+
  requestAnimationFrame(draw);
 }
 
