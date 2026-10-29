@@ -1,836 +1,1220 @@
 
-import streamlit as st
 import random
-import time
+import sqlite3
 import html
+from pathlib import Path
 
-st.set_page_config(
-    page_title="Game Shop",
-    page_icon="🎮",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+import streamlit as st
+import streamlit.components.v1 as components
 
 # ============================================================
-# GAME SHOP + GAMBLING + ROLLS RNG
+# ROLLS GAME HUB
+# Start met: streamlit run app.py
 # ============================================================
 
-START_SHOP = {
-    "bread": [4.99, 15], "cheese": [6.99, 23],
-    "cola": [2.67, 36], "pancakes": [3.25, 36],
-    "pizza": [8.99, 20], "burger": [6.50, 25],
-    "fries": [3.49, 30], "chocolate": [2.99, 40],
-    "cookie": [1.25, 50], "cake": [5.99, 15],
-    "apple": [0.75, 60], "banana": [0.60, 60],
-    "water": [1.00, 50], "energy_drink": [3.50, 25],
-    "headphones": [49.99, 10], "keyboard": [79.99, 8],
-    "mouse": [39.99, 12], "monitor": [199.99, 5],
-    "phone": [699.99, 4], "laptop": [999.99, 3],
-    "gaming_pc": [1499.99, 2], "controller": [59.99, 10],
-    "tshirt": [19.99, 20], "hoodie": [49.99, 15],
-    "jeans": [39.99, 18], "sneakers": [89.99, 10],
-    "cap": [14.99, 20], "minecraft": [29.99, 10],
-    "gaming_chair": [249.99, 4], "gaming_desk": [179.99, 5],
-    "microphone": [69.99, 8], "webcam": [49.99, 10],
-    "diamond": [499.99, 3], "gold_bar": [999.99, 2],
-    "mystery_box": [24.99, 20], "legendary_trophy": [2499.99, 1],
-    "uranium": [1999.99, 1],
-}
+st.set_page_config(page_title="ROLLS • Game", page_icon="🎲", layout="wide")
 
-CATEGORIES = {
-    "🍔 Food & Drinks": [
-        "bread", "cheese", "cola", "pancakes", "pizza", "burger",
-        "fries", "chocolate", "cookie", "cake", "apple", "banana",
-        "water", "energy_drink",
-    ],
-    "💻 Electronics": [
-        "headphones", "keyboard", "mouse", "monitor", "phone",
-        "laptop", "gaming_pc", "controller",
-    ],
-    "👕 Clothing": ["tshirt", "hoodie", "jeans", "sneakers", "cap"],
-    "🎮 Gaming": [
-        "minecraft", "gaming_chair", "gaming_desk",
-        "microphone", "webcam",
-    ],
-    "💎 Rare Items": [
-        "diamond", "gold_bar", "mystery_box",
-        "legendary_trophy", "uranium",
-    ],
-}
+DB_PATH = Path(__file__).with_name("rolls_game.db")
+ADMIN_CODE = "Admin123"
+ROLL_COST = 100
+MAX_LUCK_PERCENT = 1_000_000
 
-INFO = {
-    "bread": ("🍞", "You can eat this."),
-    "cheese": ("🧀", "A tasty snack."),
-    "cola": ("🥤", "A refreshing drink."),
-    "pancakes": ("🥞", "A stack of pancakes."),
-    "pizza": ("🍕", "A delicious pizza."),
-    "burger": ("🍔", "A classic burger."),
-    "fries": ("🍟", "Crispy fries."),
-    "chocolate": ("🍫", "Something sweet."),
-    "cookie": ("🍪", "A freshly baked cookie."),
-    "cake": ("🍰", "A slice of cake."),
-    "apple": ("🍎", "A fresh apple."),
-    "banana": ("🍌", "A ripe banana."),
-    "water": ("💧", "Restores thirst."),
-    "energy_drink": ("⚡", "Restores thirst."),
-    "headphones": ("🎧", "Listen to your favourite sounds."),
-    "keyboard": ("⌨️", "A keyboard for your setup."),
-    "mouse": ("🖱️", "A gaming mouse."),
-    "monitor": ("🖥️", "A computer monitor."),
-    "phone": ("📱", "A modern phone."),
-    "laptop": ("💻", "A portable computer."),
-    "gaming_pc": ("🖥️", "A powerful gaming PC."),
-    "controller": ("🎮", "A gaming controller."),
-    "tshirt": ("👕", "A casual T-shirt."),
-    "hoodie": ("🧥", "A comfortable hoodie."),
-    "jeans": ("👖", "A pair of jeans."),
-    "sneakers": ("👟", "A pair of sneakers."),
-    "cap": ("🧢", "A cap for your character."),
-    "minecraft": ("⛏️", "A block-building adventure."),
-    "gaming_chair": ("🪑", "A chair for your setup."),
-    "gaming_desk": ("🪵", "A desk for your setup."),
-    "microphone": ("🎙️", "A microphone."),
-    "webcam": ("📷", "A webcam."),
-    "diamond": ("💎", "A rare diamond."),
-    "gold_bar": ("🥇", "A precious gold bar."),
-    "mystery_box": ("🎁", "What's inside? It's a mystery."),
-    "legendary_trophy": ("🏆", "An extremely rare trophy."),
-    "uranium": ("☢️", "Don't taste this."),
-}
-
-FOOD_ITEMS = {
-    "bread", "cheese", "pancakes", "pizza", "burger", "fries",
-    "chocolate", "cookie", "cake", "apple", "banana",
-}
-DRINK_ITEMS = {"cola", "water", "energy_drink"}
-
-# ============================================================
-# ROLLS ITEMS
-# ============================================================
-
-ROLL_ITEMS = [
-    {"name": "Roblox", "odds": 2, "rarity": "Common",
-     "animation": "no", "emoji": "🟥"},
-    {"name": "Enrique", "odds": 4, "rarity": "Common",
-     "animation": "no", "emoji": "🎵"},
-    {"name": "Unknown I", "odds": 8, "rarity": "Common",
-     "animation": "no", "emoji": "⚪"},
-    {"name": "Unknown II", "odds": 16, "rarity": "Common",
-     "animation": "no", "emoji": "🔹"},
-    {"name": "Unknown III", "odds": 32, "rarity": "Common",
-     "animation": "no", "emoji": "🔸"},
-    {"name": "Unknown IV", "odds": 64, "rarity": "Common",
-     "animation": "no", "emoji": "🟢"},
-    {"name": "Unknown V", "odds": 128, "rarity": "Uncommon",
-     "animation": "no", "emoji": "🟩"},
-    {"name": "Unknown VI", "odds": 264, "rarity": "Uncommon",
-     "animation": "yes", "emoji": "💠"},
-    {"name": "Unknown VII", "odds": 528, "rarity": "Uncommon",
-     "animation": "yes", "emoji": "🔷"},
-    {"name": "Unknown VIII", "odds": 1048, "rarity": "Rare",
-     "animation": "yes", "emoji": "💎"},
-    {"name": "Unknown IX", "odds": 2500, "rarity": "Rare",
-     "animation": "yes", "emoji": "🌠"},
-    {"name": "Unknown X", "odds": 5000, "rarity": "Rare",
-     "animation": "yes", "emoji": "🌀"},
-    {"name": "Unknown XI", "odds": 1000, "rarity": "Rare",
-     "animation": "yes", "emoji": "⚡"},
-    {"name": "Unknown XII", "odds": 25000, "rarity": "Legendary",
-     "animation": "super", "emoji": "👑"},
-    {"name": "Unknown XIII", "odds": 50000, "rarity": "Legendary",
-     "animation": "super", "emoji": "🔥"},
-    {"name": "Unknown XIV", "odds": 100000, "rarity": "Legendary",
-     "animation": "super", "emoji": "☄️"},
-    {"name": "Blackhole", "odds": 250000, "rarity": "Mythical",
-     "animation": "super", "emoji": "🌌"},
-    {"name": "Unknown XV", "odds": 500000, "rarity": "Mythical",
-     "animation": "super", "emoji": "🪐"},
-    {"name": "Unknown XVI", "odds": 1000000, "rarity": "Mythical",
-     "animation": "supersuper", "emoji": "♾️"},
+ITEMS = [
+    {"name": "Roblox", "odds": 2, "rarity": "Common", "animation": "no", "emoji": "🟥"},
+    {"name": "Enrique", "odds": 4, "rarity": "Common", "animation": "no", "emoji": "🎵"},
+    {"name": "Unknown 1", "odds": 8, "rarity": "Common", "animation": "no", "emoji": "⚪"},
+    {"name": "Unknown 2", "odds": 16, "rarity": "Common", "animation": "no", "emoji": "🔹"},
+    {"name": "Unknown 3", "odds": 32, "rarity": "Common", "animation": "no", "emoji": "🔸"},
+    {"name": "Unknown 4", "odds": 64, "rarity": "Common", "animation": "no", "emoji": "🟢"},
+    {"name": "Unknown 5", "odds": 128, "rarity": "Uncommon", "animation": "no", "emoji": "🟩"},
+    {"name": "Unknown 6", "odds": 264, "rarity": "Uncommon", "animation": "yes", "emoji": "💠"},
+    {"name": "Unknown 7", "odds": 528, "rarity": "Uncommon", "animation": "yes", "emoji": "🔷"},
+    {"name": "Unknown 8", "odds": 1048, "rarity": "Rare", "animation": "yes", "emoji": "💎"},
+    {"name": "Unknown 9", "odds": 2500, "rarity": "Rare", "animation": "yes", "emoji": "🌠"},
+    {"name": "Unknown 10", "odds": 5000, "rarity": "Rare", "animation": "yes", "emoji": "🌀"},
+    {"name": "Unknown 11", "odds": 1000, "rarity": "Rare", "animation": "yes", "emoji": "⚡"},
+    {"name": "Unknown 12", "odds": 25000, "rarity": "Legendary", "animation": "super", "emoji": "👑"},
+    {"name": "Unknown 13", "odds": 50000, "rarity": "Legendary", "animation": "super", "emoji": "🔥"},
+    {"name": "Unknown 14", "odds": 100000, "rarity": "Legendary", "animation": "super", "emoji": "☄️"},
+    {"name": "Blackhole", "odds": 250000, "rarity": "Mythical", "animation": "super", "emoji": "🌌"},
+    {"name": "Unknown 15", "odds": 500000, "rarity": "Mythical", "animation": "super", "emoji": "🪐"},
+    {"name": "Unknown 16", "odds": 1000000, "rarity": "Mythical", "animation": "supersuper", "emoji": "🌑"},
 ]
 
 RARITY_COLORS = {
-    "Common": "#b5bac1",
-    "Uncommon": "#57e389",
-    "Rare": "#43a5ff",
-    "Legendary": "#ffad33",
-    "Mythical": "#d65cff",
+    "Common": "#9ca3af",
+    "Uncommon": "#34d399",
+    "Rare": "#60a5fa",
+    "Legendary": "#fbbf24",
+    "Mythical": "#e879f9",
 }
 
-# ============================================================
-# SESSION STATE
-# ============================================================
-
-defaults = {
-    "money": 250.00,
-    "shop": {k: v.copy() for k, v in START_SHOP.items()},
-    "inventory": {},
-    "rolls_inventory": {},
-    "rolls_count": 0,
-    "rolls_spent": 0.0,
-    "last_roll": None,
-    "notice": None,
-    "last_spin": None,
-    "hunger": 100.0,
-    "thirst": 100.0,
-    "survival_updated_at": time.time(),
-    "game_over": False,
-    "stats": {
-        "items_bought": 0,
-        "spins": 0,
-        "money_earned": 0.0,
-    },
-}
-
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value.copy() if isinstance(value, dict) else value
-
-for item, data in START_SHOP.items():
-    st.session_state.shop.setdefault(item, data.copy())
 
 # ============================================================
-# SURVIVAL TIMER
+# DATABASE
 # ============================================================
 
-now = time.time()
-elapsed = max(0, now - st.session_state.survival_updated_at)
-st.session_state.survival_updated_at = now
-st.session_state.hunger = max(0, st.session_state.hunger - elapsed * 0.12)
-st.session_state.thirst = max(0, st.session_state.thirst - elapsed * 0.18)
+def db_connect():
+    con = sqlite3.connect(DB_PATH, check_same_thread=False)
+    con.row_factory = sqlite3.Row
+    return con
 
-if st.session_state.hunger <= 0 or st.session_state.thirst <= 0:
-    st.session_state.game_over = True
+
+def init_db():
+    with db_connect() as con:
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS players (
+                username TEXT PRIMARY KEY,
+                money REAL NOT NULL DEFAULT 1000,
+                luck REAL NOT NULL DEFAULT 0,
+                infinite_money INTEGER NOT NULL DEFAULT 0,
+                inventory TEXT NOT NULL DEFAULT ''
+            )
+        """)
+
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS rolls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                item_name TEXT NOT NULL,
+                odds INTEGER NOT NULL,
+                rarity TEXT NOT NULL,
+                rolled_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS game_settings (
+                setting_key TEXT PRIMARY KEY,
+                setting_value REAL NOT NULL DEFAULT 0
+            )
+        """)
+
+        con.execute("""
+            INSERT OR IGNORE INTO game_settings(setting_key, setting_value)
+            VALUES ('global_luck', 0)
+        """)
+
+        con.execute("""
+            CREATE TABLE IF NOT EXISTS global_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender TEXT NOT NULL,
+                message TEXT NOT NULL,
+                sent_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+
+def clean_username(value):
+    value = "".join(
+        ch for ch in value.strip()
+        if ch.isalnum() or ch in "_- "
+    )
+    return value[:24].strip()
+
+
+def ensure_player(username):
+    with db_connect() as con:
+        con.execute(
+            "INSERT OR IGNORE INTO players(username, money) VALUES (?, 1000)",
+            (username,),
+        )
+
+
+def get_player(username):
+    with db_connect() as con:
+        row = con.execute(
+            "SELECT * FROM players WHERE username = ?",
+            (username,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def update_player(username, **fields):
+    allowed = {"money", "luck", "infinite_money", "inventory"}
+    fields = {k: v for k, v in fields.items() if k in allowed}
+
+    if not fields:
+        return
+
+    assignments = ", ".join(f"{key} = ?" for key in fields)
+    values = list(fields.values()) + [username]
+
+    with db_connect() as con:
+        con.execute(
+            f"UPDATE players SET {assignments} WHERE username = ?",
+            values,
+        )
+
+
+def all_players():
+    with db_connect() as con:
+        rows = con.execute("""
+            SELECT username, money, luck, infinite_money
+            FROM players
+            ORDER BY username
+        """).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_global_luck():
+    with db_connect() as con:
+        row = con.execute("""
+            SELECT setting_value
+            FROM game_settings
+            WHERE setting_key = 'global_luck'
+        """).fetchone()
+
+    return float(row[0]) if row else 0.0
+
+
+def set_global_luck(value):
+    value = max(0, min(float(value), MAX_LUCK_PERCENT))
+
+    with db_connect() as con:
+        con.execute("""
+            INSERT INTO game_settings(setting_key, setting_value)
+            VALUES ('global_luck', ?)
+            ON CONFLICT(setting_key)
+            DO UPDATE SET setting_value = excluded.setting_value
+        """, (value,))
+
+
+def send_global_message(sender, message):
+    message = message.strip()[:300]
+
+    if not message:
+        return False
+
+    with db_connect() as con:
+        con.execute(
+            "INSERT INTO global_messages(sender, message) VALUES (?, ?)",
+            (sender[:24], message),
+        )
+
+        # Bewaar maximaal 50 recente berichten.
+        con.execute("""
+            DELETE FROM global_messages
+            WHERE id NOT IN (
+                SELECT id FROM global_messages
+                ORDER BY id DESC LIMIT 50
+            )
+        """)
+
+    return True
+
+
+def recent_global_messages(limit=5):
+    with db_connect() as con:
+        rows = con.execute("""
+            SELECT sender, message, sent_at
+            FROM global_messages
+            ORDER BY id DESC
+            LIMIT ?
+        """, (limit,)).fetchall()
+
+    return [dict(row) for row in rows]
+
+
+def add_inventory_item(username, item_name):
+    player = get_player(username)
+    inventory = [
+        x for x in (player["inventory"] or "").split("|")
+        if x
+    ]
+    inventory.append(item_name)
+    update_player(username, inventory="|".join(inventory))
+
+
+def save_roll(username, item):
+    with db_connect() as con:
+        con.execute("""
+            INSERT INTO rolls(username, item_name, odds, rarity)
+            VALUES (?, ?, ?, ?)
+        """, (
+            username,
+            item["name"],
+            item["odds"],
+            item["rarity"],
+        ))
+
+
+def recent_rolls(username, limit=20):
+    with db_connect() as con:
+        rows = con.execute("""
+            SELECT item_name, odds, rarity, rolled_at
+            FROM rolls
+            WHERE username = ?
+            ORDER BY id DESC
+            LIMIT ?
+        """, (username, limit)).fetchall()
+
+    return [dict(row) for row in rows]
+
 
 # ============================================================
-# NEON DESIGN
+# ROLLS / LUCK
 # ============================================================
+
+def roll_item(luck_percent):
+    multiplier = (
+        1
+        + max(0, min(float(luck_percent), MAX_LUCK_PERCENT)) / 100
+    )
+
+    # Controleer zeldzame drops eerst.
+    rarest_first = sorted(
+        ITEMS,
+        key=lambda item: item["odds"],
+        reverse=True,
+    )
+
+    for item in rarest_first:
+        denominator = max(1, int(item["odds"] / multiplier))
+
+        if random.randint(1, denominator) == 1:
+            return item
+
+    common = [
+        item for item in ITEMS
+        if item["rarity"] == "Common"
+    ]
+    return random.choice(common)
+
+
+def show_reveal(item):
+    rarity = item["rarity"]
+    animation = item["animation"]
+    color = RARITY_COLORS.get(rarity, "#ffffff")
+    safe_name = html.escape(item["name"])
+    safe_rarity = html.escape(rarity.upper())
+    emoji = item["emoji"]
+
+    if animation == "no":
+        st.success(
+            f"{emoji} **{item['name']}** — {rarity} — 1/{item['odds']:,}"
+        )
+        return
+
+    if animation == "yes":
+        duration = 5
+        body = f"""
+        <div class="reveal normal" style="--glow:{color}">
+          <div class="burst"></div>
+          <div class="emoji">{emoji}</div>
+          <div class="rarity">{safe_rarity}</div>
+          <div class="name">{safe_name}</div>
+          <div class="odds">1 IN {item['odds']:,}</div>
+        </div>
+        """
+    elif animation == "super":
+        duration = 8
+        body = f"""
+        <div class="reveal super" style="--glow:{color}">
+          <div class="scan"></div>
+          <div class="rings"></div>
+          <div class="burst"></div>
+          <div class="emoji">{emoji}</div>
+          <div class="rarity">{safe_rarity} DROP</div>
+          <div class="name">{safe_name}</div>
+          <div class="odds">1 IN {item['odds']:,}</div>
+        </div>
+        """
+    else:
+        duration = 13
+        body = f"""
+        <div class="reveal ultra" style="--glow:{color}">
+          <div class="stars"></div>
+          <div class="portal"></div>
+          <div class="shockwave"></div>
+          <div class="blackout">REALITY BREAKING...</div>
+          <div class="emoji">{emoji}</div>
+          <div class="rarity">✦ MYTHICAL • ABSOLUTE RARITY ✦</div>
+          <div class="name">{safe_name}</div>
+          <div class="odds">1 IN 1,000,000</div>
+          <div class="final">THE IMPOSSIBLE HAS HAPPENED</div>
+        </div>
+        """
+
+    components.html(f"""
+    <style>
+      * {{ box-sizing: border-box; }}
+      body {{
+        margin: 0;
+        background: transparent;
+        font-family: Arial, sans-serif;
+        color: white;
+      }}
+      .reveal {{
+        position: relative;
+        height: 360px;
+        overflow: hidden;
+        border-radius: 22px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: radial-gradient(
+          ellipse at center,
+          var(--glow),
+          #05050a 72%
+        );
+        border: 1px solid var(--glow);
+        box-shadow: 0 0 28px var(--glow);
+      }}
+      .emoji {{
+        z-index: 2;
+        font-size: 70px;
+        animation: float 1.8s ease-in-out infinite, pop .8s ease-out both;
+        filter: drop-shadow(0 0 20px var(--glow));
+      }}
+      .rarity {{
+        z-index: 2;
+        margin-top: 8px;
+        font-size: 13px;
+        letter-spacing: 5px;
+        color: white;
+        font-weight: 900;
+      }}
+      .name {{
+        z-index: 2;
+        margin-top: 8px;
+        font-size: clamp(26px, 5vw, 46px);
+        font-weight: 1000;
+        text-align: center;
+        text-shadow: 0 0 10px var(--glow), 0 0 28px var(--glow);
+        animation: glitch .7s steps(2) 2;
+      }}
+      .odds {{
+        z-index: 2;
+        margin-top: 12px;
+        font-size: 18px;
+        letter-spacing: 3px;
+        font-weight: 800;
+      }}
+      .burst {{
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--glow);
+        box-shadow: 0 0 70px 35px var(--glow);
+        animation: burst 2.4s ease-out both;
+        opacity: .7;
+      }}
+      .rings {{
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border: 2px solid var(--glow);
+        border-radius: 50%;
+        box-shadow: 0 0 30px var(--glow);
+        animation: ring 3s ease-out infinite;
+      }}
+      .scan {{
+        position: absolute;
+        inset: -80% 0;
+        background: linear-gradient(transparent, #ffffff30, transparent);
+        animation: scan 3s linear infinite;
+      }}
+      .super {{
+        animation: shake .12s linear 5, hue 4s linear infinite;
+      }}
+      .ultra {{
+        height: 430px;
+        background: radial-gradient(
+          circle at center,
+          #26113d 0,
+          #090714 36%,
+          #020207 78%
+        );
+        animation: universe 13s ease-in-out both;
+      }}
+      .portal {{
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border: 5px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 25px #c084fc, 0 0 65px #8b5cf6;
+        animation: portal 5s ease-in-out both;
+      }}
+      .shockwave {{
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        border: 3px solid #fff;
+        border-radius: 50%;
+        animation: shock 4s 3s ease-out infinite;
+      }}
+      .stars {{
+        position: absolute;
+        inset: 0;
+        opacity: .65;
+        background-image:
+          radial-gradient(2px 2px at 15% 25%, white 50%, transparent 60%),
+          radial-gradient(2px 2px at 75% 20%, #f0abfc 50%, transparent 60%),
+          radial-gradient(3px 3px at 40% 70%, white 50%, transparent 60%),
+          radial-gradient(2px 2px at 88% 75%, #c4b5fd 50%, transparent 60%),
+          radial-gradient(2px 2px at 22% 82%, white 50%, transparent 60%);
+        animation: stars 2s ease-in-out infinite alternate;
+      }}
+      .blackout {{
+        position: absolute;
+        top: 22px;
+        font-size: 11px;
+        letter-spacing: 5px;
+        color: #c4b5fd;
+        animation: fadeout 3s both;
+      }}
+      .final {{
+        z-index: 2;
+        margin-top: 14px;
+        color: #f5d0fe;
+        font-size: 12px;
+        letter-spacing: 3px;
+        font-weight: 900;
+        animation: fadein 2s 7s both;
+      }}
+      @keyframes float {{
+        50% {{ transform: translateY(-12px) rotate(3deg); }}
+      }}
+      @keyframes pop {{
+        from {{ transform: scale(.1); opacity: 0; }}
+        to {{ opacity: 1; }}
+      }}
+      @keyframes burst {{
+        0% {{ transform: scale(.1); opacity: 0; }}
+        35% {{ opacity: .8; }}
+        100% {{ transform: scale(15); opacity: 0; }}
+      }}
+      @keyframes ring {{
+        from {{ transform: scale(.4); opacity: 1; }}
+        to {{ transform: scale(4); opacity: 0; }}
+      }}
+      @keyframes scan {{
+        to {{ transform: translateY(100%); }}
+      }}
+      @keyframes shake {{
+        0%,100% {{ transform: translateX(0); }}
+        25% {{ transform: translateX(-3px); }}
+        75% {{ transform: translateX(3px); }}
+      }}
+      @keyframes hue {{
+        50% {{ filter: hue-rotate(45deg); }}
+      }}
+      @keyframes glitch {{
+        0%,100% {{ transform: translate(0); }}
+        30% {{ transform: translate(2px,-1px); }}
+        60% {{ transform: translate(-2px,1px); }}
+      }}
+      @keyframes portal {{
+        0% {{ transform: scale(.05) rotate(0); opacity: 0; }}
+        35% {{ opacity: 1; }}
+        75% {{ transform: scale(5) rotate(240deg); opacity: .8; }}
+        100% {{ transform: scale(8) rotate(360deg); opacity: 0; }}
+      }}
+      @keyframes shock {{
+        to {{ transform: scale(12); opacity: 0; }}
+      }}
+      @keyframes stars {{
+        to {{ opacity: 1; transform: scale(1.03); }}
+      }}
+      @keyframes fadeout {{
+        0%,60% {{ opacity: 1; }}
+        100% {{ opacity: 0; }}
+      }}
+      @keyframes fadein {{
+        from {{ opacity: 0; transform: translateY(12px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
+      }}
+      @keyframes universe {{
+        0% {{ filter: brightness(.2); }}
+        20% {{ filter: brightness(.6); }}
+        45% {{ filter: brightness(1.5); }}
+        55% {{ filter: brightness(.5); }}
+        100% {{ filter: brightness(1); }}
+      }}
+    </style>
+    {body}
+    """, height=450 if animation == "supersuper" else 380, scrolling=False)
+
+
+# ============================================================
+# APP INITIALISEREN
+# ============================================================
+
+init_db()
+
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+if "admin_logged_in" not in st.session_state:
+    st.session_state.admin_logged_in = False
+
+if "last_drop" not in st.session_state:
+    st.session_state.last_drop = None
+
+if "gambling_mode" not in st.session_state:
+    st.session_state.gambling_mode = "🎰 Money Machine"
+
 
 st.markdown("""
 <style>
-.stApp {
-    background-color:#10101b;
-    background-image:
-        radial-gradient(ellipse at 12% 8%,#51138a 0%,transparent 40%),
-        radial-gradient(ellipse at 88% 75%,#07566a 0%,transparent 42%);
-    background-attachment:fixed;
-    color:#f7f2ff;
-}
-[data-testid="stAppViewContainer"] {background:transparent;}
-[data-testid="stSidebar"] {
-    background:rgba(25,19,41,.97);
-    border-right:2px solid #8c36d9;
-}
-h1,h2,h3 {color:white;}
-div[data-testid="stMetric"] {
-    background:rgba(32,24,50,.94);
-    border:1px solid #7338a8;
-    padding:14px;
-    border-radius:14px;
-}
-div[data-testid="stVerticalBlockBorderWrapper"] {
-    background:rgba(31,23,49,.96);
-    border:1px solid #563b78;
-    border-radius:15px;
-}
-div.stButton > button {
-    background:linear-gradient(110deg,#7727d5,#bd26a7);
-    color:white;
-    border:1px solid #d58cff;
-    border-radius:10px;
-    font-weight:650;
-    transition:transform .18s ease,filter .18s ease;
-}
-div.stButton > button:hover {
-    filter:brightness(1.2);
-    transform:translateY(-2px);
-    border-color:white;
-}
-.item-emoji {font-size:40px;margin-bottom:8px;}
-.item-name {font-size:16px;font-weight:700;overflow-wrap:anywhere;}
-.item-price {color:#50f0e1;font-weight:700;margin-top:6px;}
-.item-stock {color:#c3b7d4;font-size:12px;margin-top:4px;}
-.slot {
-    background:linear-gradient(145deg,#251a3f,#121b34);
-    border:2px solid #a84cff;border-radius:16px;
-    padding:18px 3px;text-align:center;font-size:42px;
-    min-height:95px;box-shadow:0 0 12px #6824a833;
-}
-.page-content {animation:page-enter .35s ease-out;}
-@keyframes page-enter {
-    from {opacity:.3;transform:translateY(8px);}
-    to {opacity:1;transform:translateY(0);}
-}
-.roll-card {
-    border:2px solid var(--glow);
-    border-radius:22px;
-    padding:25px;
-    text-align:center;
-    background:radial-gradient(circle at center,#30204a,#090914 80%);
-    box-shadow:0 0 25px var(--glow);
-    animation:reveal-in .8s cubic-bezier(.2,.8,.2,1);
-    overflow:hidden;
-}
-.roll-emoji {
-    font-size:76px;
-    filter:drop-shadow(0 0 18px var(--glow));
-    animation:float 1.7s ease-in-out infinite;
-}
-.roll-name {
-    font-size:clamp(25px,5vw,43px);
-    font-weight:1000;
-    text-shadow:0 0 12px var(--glow),0 0 30px var(--glow);
-    overflow-wrap:anywhere;
-}
-.roll-rarity {letter-spacing:5px;font-weight:900;color:var(--glow);}
-.roll-odds {font-size:18px;letter-spacing:3px;margin-top:10px;}
-.roll-super {
-    background:radial-gradient(circle at center,#532078,#10091e 60%,#020207);
-    animation:reveal-in 2s ease-out,super-glow 1.2s ease-in-out infinite alternate;
-}
-.roll-ultra {
-    min-height:370px;
-    background:radial-gradient(circle,#5b1685,#160d2b 35%,#020207 78%);
-    animation:reveal-in 2s ease-out,universe 4s ease-in-out infinite alternate;
-}
-.roll-ultra .roll-emoji {font-size:100px;animation:portal 5s ease-in-out infinite;}
-@keyframes reveal-in {
-    0% {opacity:0;transform:scale(.1) rotate(-12deg);filter:brightness(4);}
-    60% {opacity:1;transform:scale(1.08) rotate(3deg);}
-    100% {opacity:1;transform:scale(1) rotate(0);filter:brightness(1);}
-}
-@keyframes float {
-    0%,100% {transform:translateY(0);}
-    50% {transform:translateY(-12px);}
-}
-@keyframes super-glow {
-    from {box-shadow:0 0 15px #ffad33;}
-    to {box-shadow:0 0 65px #ffdf70;}
-}
-@keyframes universe {
-    0% {filter:brightness(.4) hue-rotate(0deg);}
-    50% {filter:brightness(1.5) hue-rotate(35deg);}
-    100% {filter:brightness(.8) hue-rotate(-25deg);}
-}
-@keyframes portal {
-    0%,100% {transform:rotate(-8deg) scale(.9);}
-    50% {transform:rotate(8deg) scale(1.15);}
-}
-.jackpot {
-    background:linear-gradient(135deg,#541a8b,#a51b87,#df7914);
-    border:2px solid #ffe56a;border-radius:18px;
-    padding:24px;text-align:center;
-    animation:super-glow .8s ease-in-out infinite alternate;
-}
+  .stApp {
+    background:
+      radial-gradient(circle at 8% 0%, rgba(125,55,255,.22), transparent 28%),
+      radial-gradient(circle at 95% 18%, rgba(0,220,255,.15), transparent 25%),
+      #090914;
+    background-attachment: fixed;
+    color: #f7f7ff;
+  }
+  [data-testid="stSidebar"] {
+    background: rgba(17,14,35,.96);
+    border-right: 1px solid #292348;
+  }
+  h1,h2,h3 { letter-spacing: -.5px; }
+  div.stButton > button {
+    border: 1px solid #8b5cf6;
+    border-radius: 12px;
+    font-weight: 800;
+  }
+  div.stButton > button:hover {
+    border-color: #22d3ee;
+    color: #67e8f9;
+    box-shadow: 0 0 18px #7c3aed55;
+  }
+  .hero {
+    padding: 24px;
+    border-radius: 20px;
+    border: 1px solid #443078;
+    background: linear-gradient(120deg,#21143e,#101a30);
+    box-shadow: 0 0 30px #6d28d922;
+  }
+  .muted { color: #b7b4d5; }
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================
-# HELPERS
-# ============================================================
-
-def pretty_name(item):
-    return item.replace("_", " ").title()
-
-def emoji_for(item):
-    return INFO.get(item, ("📦", ""))[0]
-
-def buy_item(item, quantity):
-    price, stock = st.session_state.shop[item]
-    total = round(price * quantity, 2)
-
-    if quantity < 1 or stock < quantity:
-        st.session_state.notice = ("error", "Not enough stock.")
-    elif st.session_state.money < total:
-        st.session_state.notice = ("error", "Not enough money.")
-    else:
-        st.session_state.money = round(st.session_state.money - total, 2)
-        st.session_state.shop[item][1] -= quantity
-        st.session_state.inventory[item] = (
-            st.session_state.inventory.get(item, 0) + quantity
-        )
-        st.session_state.stats["items_bought"] += quantity
-        st.session_state.notice = (
-            "success", f"Bought {quantity} × {pretty_name(item)}!"
-        )
-
-def use_item(item):
-    quantity = st.session_state.inventory.get(item, 0)
-    if quantity < 1:
-        st.session_state.notice = ("error", "You don't own this item.")
-        return
-
-    if item == "uranium":
-        st.session_state.inventory[item] -= 1
-        if st.session_state.inventory[item] <= 0:
-            del st.session_state.inventory[item]
-        st.session_state.game_over = True
-        st.rerun()
-
-    if item in FOOD_ITEMS:
-        st.session_state.hunger = min(100, st.session_state.hunger + 35)
-        st.session_state.inventory[item] -= 1
-        st.session_state.notice = ("success", f"You ate {pretty_name(item)}!")
-    elif item in DRINK_ITEMS:
-        st.session_state.thirst = min(100, st.session_state.thirst + 40)
-        st.session_state.inventory[item] -= 1
-        st.session_state.notice = ("success", f"You drank {pretty_name(item)}!")
-    else:
-        st.session_state.notice = (
-            "info", INFO.get(item, ("", "You inspected this item."))[1]
-        )
-
-    if item in st.session_state.inventory and st.session_state.inventory[item] <= 0:
-        del st.session_state.inventory[item]
-    st.rerun()
 
 # ============================================================
-# ROLLS LOGIC
+# SIDEBAR / PLAYER
 # ============================================================
 
-def perform_roll():
-    cost = 100
+st.sidebar.markdown("# 🎮 GAME HUB")
+st.sidebar.caption("Neon edition")
 
-    if st.session_state.money < cost:
-        st.session_state.notice = ("error", "You need €100 to roll.")
-        return
-
-    st.session_state.money = round(st.session_state.money - cost, 2)
-    st.session_state.rolls_spent += cost
-    st.session_state.rolls_count += 1
-
-    # Check the rarest drops first.
-    # These are independent odds; the rarest successful check wins.
-    result = None
-    for item in sorted(ROLL_ITEMS, key=lambda x: x["odds"], reverse=True):
-        if random.randint(1, item["odds"]) == 1:
-            result = item
-            break
-
-    if result is None:
-        result = random.choice([x for x in ROLL_ITEMS if x["rarity"] == "Common"])
-
-    name = result["name"]
-    st.session_state.rolls_inventory[name] = (
-        st.session_state.rolls_inventory.get(name, 0) + 1
-    )
-    st.session_state.last_roll = result.copy()
-    st.session_state.notice = None
-
-def show_roll_reveal(item):
-    rarity = item["rarity"]
-    color = RARITY_COLORS[rarity]
-    animation = item["animation"]
-
-    st.markdown(
-        f"""
-        <div class="roll-card {'roll-super' if animation == 'super' else ''} {'roll-ultra' if animation == 'supersuper' else ''}"
-             style="--glow:{color}">
-            <div style="font-size:12px;letter-spacing:4px;margin-bottom:10px">
-                {"🌌 REALITY IS BREAKING..." if animation == "supersuper" else "✨ DROP DISCOVERED ✨" if animation == "yes" else "⚡ LEGENDARY REVEAL ⚡" if animation == "super" else "DROP"}
-            </div>
-            <div class="roll-emoji">{item["emoji"]}</div>
-            <div class="roll-rarity">{html.escape(rarity.upper())}</div>
-            <div class="roll-name">{html.escape(item["name"])}</div>
-            <div class="roll-odds">1 IN {item["odds"]:,}</div>
-            <div style="margin-top:18px;font-size:12px;letter-spacing:2px">
-                {"THE IMPOSSIBLE HAS HAPPENED" if animation == "supersuper" else "INCREDIBLE DROP!" if animation == "super" else "RARE DROP UNLOCKED" if animation == "yes" else "ADDED TO COLLECTION"}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if animation == "yes":
-        st.balloons()
-    elif animation == "super":
-        st.snow()
-        st.balloons()
-    elif animation == "supersuper":
-        stages = [
-            "🌌 The dimension is breaking...",
-            "🌀 Something is approaching...",
-            "⚡ Reality is collapsing...",
-            "♾️ THE MYTHICAL HAS ARRIVED!",
-        ]
-        reveal = st.empty()
-        progress = st.progress(0)
-        for i, stage in enumerate(stages):
-            reveal.markdown(
-                f"""
-                <div style="padding:22px;text-align:center;border:2px solid #d65cff;
-                border-radius:18px;background:radial-gradient(circle,#542078,#080510);
-                font-size:25px;font-weight:900;box-shadow:0 0 30px #d65cff">
-                    {stage}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            progress.progress(int((i + 1) / len(stages) * 100))
-            time.sleep(1.2)
-        st.balloons()
-        st.snow()
-        progress.empty()
-
-# ============================================================
-# NAVIGATION
-# ============================================================
-
-page = st.sidebar.radio(
-    "NAVIGATION",
-    ["Shop", "Gambling", "ROLLS", "Inventory", "Stats"],
-    format_func=lambda p: {
-        "Shop": "🛍️   Shop",
-        "Gambling": "🎰   Gambling",
-        "ROLLS": "✨   ROLLS",
-        "Inventory": "🎒   Inventory",
-        "Stats": "📊   Stats",
-    }[p],
+player_name = st.sidebar.text_input(
+    "Playernaam",
+    value=st.session_state.username,
+    max_chars=24,
+    key="player_name_input",
 )
 
-st.sidebar.divider()
-st.sidebar.metric("💰 Balance", f"€{st.session_state.money:,.2f}")
+if st.sidebar.button("Gebruik deze speler", use_container_width=True):
+    name = clean_username(player_name)
 
-st.sidebar.markdown("### SURVIVAL")
-st.sidebar.write(f"🍗 Hunger — {int(st.session_state.hunger)}%")
-st.sidebar.progress(int(st.session_state.hunger))
-st.sidebar.write(f"💧 Thirst — {int(st.session_state.thirst)}%")
-st.sidebar.progress(int(st.session_state.thirst))
-st.sidebar.caption("Food restores hunger. Drinks restore thirst.")
-
-top1, top2 = st.columns(2)
-with top1:
-    st.caption(f"🍗 HUNGER · {int(st.session_state.hunger)}%")
-    st.progress(int(st.session_state.hunger))
-with top2:
-    st.caption(f"💧 THIRST · {int(st.session_state.thirst)}%")
-    st.progress(int(st.session_state.thirst))
-
-if st.session_state.hunger < 25:
-    st.warning("Your hunger is low! Buy food and use it in your inventory.")
-if st.session_state.thirst < 25:
-    st.warning("Your thirst is low! Buy a drink and use it in your inventory.")
-
-if st.session_state.notice:
-    kind, message = st.session_state.notice
-    if kind == "success":
-        st.success(message)
-    elif kind == "error":
-        st.error(message)
+    if not name:
+        st.sidebar.error("Vul een geldige spelernaam in.")
     else:
-        st.info(message)
-    st.session_state.notice = None
-
-# ============================================================
-# GAME OVER
-# ============================================================
-
-if st.session_state.game_over:
-    st.title("☠️ GAME OVER")
-    st.error("Your character ran out of hunger or thirst, or triggered the fictional uranium game-over effect.")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Balance", f"€{st.session_state.money:,.2f}")
-    c2.metric("Items bought", st.session_state.stats["items_bought"])
-    c3.metric("Rolls played", st.session_state.rolls_count)
-
-    if st.button("Start a new game", use_container_width=True):
-        st.session_state.money = 250.00
-        st.session_state.inventory = {}
-        st.session_state.rolls_inventory = {}
-        st.session_state.rolls_count = 0
-        st.session_state.rolls_spent = 0.0
-        st.session_state.last_roll = None
-        st.session_state.hunger = 100.0
-        st.session_state.thirst = 100.0
-        st.session_state.survival_updated_at = time.time()
-        st.session_state.game_over = False
-        st.session_state.shop = {k: v.copy() for k, v in START_SHOP.items()}
-        st.session_state.last_spin = None
-        st.session_state.stats = {
-            "items_bought": 0, "spins": 0, "money_earned": 0.0
-        }
+        ensure_player(name)
+        st.session_state.username = name
+        st.session_state.last_drop = None
         st.rerun()
+
+if not st.session_state.username:
+    st.markdown("""
+    <div class="hero">
+      <h1>🎲 Welkom bij ROLLS</h1>
+      <p class="muted">
+        Kies links een spelernaam om te beginnen.
+        Nieuwe spelers starten met 1.000 money.
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
+username = st.session_state.username
+ensure_player(username)
+player = get_player(username)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown(f"### 👤 {html.escape(username)}")
+
+if player["infinite_money"]:
+    st.sidebar.metric("Money", "∞")
+else:
+    st.sidebar.metric("Money", f"€{player['money']:,.0f}")
+
+st.sidebar.metric("Luck boost", f"{player['luck']:,.0f}%")
+
+pages = ["Home", "Shop", "Gambling", "Inventory", "Stats", "Code"]
+
+if st.session_state.admin_logged_in:
+    pages.append("Admin Panel")
+
+page = st.sidebar.radio(
+    "NAVIGATIE",
+    pages,
+    label_visibility="collapsed",
+)
+
+
+# ============================================================
+# GLOBALE BERICHTEN
+# ============================================================
+
+messages = recent_global_messages(3)
+
+if messages:
+    with st.expander("📣 Globale berichten", expanded=True):
+        for msg in messages:
+            st.markdown(
+                f"**{html.escape(msg['sender'])}** · "
+                f"{html.escape(msg['sent_at'])}"
+            )
+            st.write(msg["message"])
+            st.divider()
+
+
+# ============================================================
+# HOME
+# ============================================================
+
+if page == "Home":
+    st.markdown("""
+    <div class="hero">
+      <h1>⚡ GAME HUB</h1>
+      <p class="muted">
+        Shop, speel Gambling, rol zeldzame drops en bouw je collectie op.
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    a, b, c = st.columns(3)
+    a.metric(
+        "Money",
+        "∞" if player["infinite_money"] else f"€{player['money']:,.0f}",
+    )
+    b.metric("Persoonlijke luck", f"{player['luck']:,.0f}%")
+    c.metric("Rolls gedaan", len(recent_rolls(username, 10000)))
+
+    st.info("Open Gambling om te wisselen tussen Money Machine en ROLLS.")
+
 
 # ============================================================
 # SHOP
 # ============================================================
 
 elif page == "Shop":
-    st.markdown('<div class="page-content">', unsafe_allow_html=True)
     st.title("🛍️ Shop")
-    st.caption("Browse categories and click an item for details.")
+    st.caption("Koop eten, drankjes en game-items met je virtuele money.")
 
-    query = st.text_input("Search items", placeholder="Try Bre, key, ura...").strip().casefold()
-    category_choice = st.selectbox("Category", ["All categories"] + list(CATEGORIES.keys()))
-    categories = CATEGORIES.items() if category_choice == "All categories" else [
-        (category_choice, CATEGORIES[category_choice])
+    shop_items = [
+        ("🍞 Bread", 5),
+        ("🧀 Cheese", 7),
+        ("🥤 Cola", 3),
+        ("🍕 Pizza", 9),
+        ("🍔 Burger", 7),
+        ("🍟 Fries", 4),
+        ("🍫 Chocolate", 3),
+        ("🍎 Apple", 1),
+        ("🎧 Headphones", 50),
+        ("⌨️ Keyboard", 80),
+        ("🖱️ Mouse", 40),
+        ("🎮 Controller", 60),
+        ("💎 Diamond", 500),
+        ("🎁 Mystery Box", 25),
     ]
 
-    found = 0
-    for category, items in categories:
-        filtered = [item for item in items if query in pretty_name(item).casefold()]
-        if not filtered:
-            continue
-        st.divider()
-        st.subheader(category)
+    cols = st.columns(3)
 
-        for start in range(0, len(filtered), 3):
-            columns = st.columns(3)
-            for column, item in zip(columns, filtered[start:start + 3]):
-                found += 1
-                price, stock = st.session_state.shop[item]
+    for i, (name, price) in enumerate(shop_items):
+        with cols[i % 3]:
+            with st.container(border=True):
+                st.subheader(name)
+                st.write(f"**€{price}**")
 
-                with column:
-                    with st.container(border=True):
-                        st.markdown(
-                            f"""
-                            <div class="item-emoji">{emoji_for(item)}</div>
-                            <div class="item-name">{pretty_name(item)}</div>
-                            <div class="item-price">€{price:,.2f}</div>
-                            <div class="item-stock">{stock} available</div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                        if st.button("View item ↗", key=f"view_{item}", use_container_width=True):
-                            st.session_state.selected_item = item
+                if st.button(
+                    f"Koop {name}",
+                    key=f"shop_{i}",
+                    use_container_width=True,
+                ):
+                    current = get_player(username)
 
-                        if st.session_state.get("selected_item") == item:
-                            st.caption(INFO[item][1])
-                            quantity = st.number_input(
-                                "Quantity", min_value=1,
-                                max_value=max(1, stock), value=1,
-                                key=f"qty_{item}",
-                                disabled=stock == 0,
+                    if current["infinite_money"] or current["money"] >= price:
+                        if not current["infinite_money"]:
+                            update_player(
+                                username,
+                                money=current["money"] - price,
                             )
-                            if stock == 0:
-                                st.error("Out of stock.")
-                            elif st.button("🛒 Buy item", key=f"buy_{item}", use_container_width=True):
-                                buy_item(item, quantity)
-                                st.session_state.selected_item = None
-                                st.rerun()
 
-    if found == 0:
-        st.info("No items found. Try another search.")
-    st.markdown("</div>", unsafe_allow_html=True)
+                        add_inventory_item(username, name)
+                        st.success(f"{name} gekocht!")
+                        st.rerun()
+                    else:
+                        st.error("Niet genoeg money.")
+
 
 # ============================================================
-# GAMBLING - ORIGINAL MONEY MACHINE
+# GAMBLING: MONEY MACHINE + ROLLS
 # ============================================================
 
 elif page == "Gambling":
-    st.markdown('<div class="page-content">', unsafe_allow_html=True)
     st.title("🎰 Gambling")
-    st.write("Free spins. Three reels. One big jackpot.")
-    st.caption("Reel 1: 1.5s · Reel 2: 3.0s · Reel 3: 4.5s")
-    st.warning("Virtual game money only.")
+    st.caption("Wissel hieronder tussen de twee spelmodi.")
+    st.warning("Alleen virtuele game-money; geen echt geld.")
 
-    if st.button("🎰 SPIN — FREE", use_container_width=True):
-        symbols = ["🍋", "🍒", "🍇", "🍉", "⭐", "💎", "🔔", "🍊"]
-        final_symbols = [random.choice(symbols) for _ in range(3)]
-        if random.random() < 0.025:
-            final_symbols = ["🍋", "🍋", "🍋"]
-
-        reels = [st.empty() for _ in range(3)]
-        start_time = time.time()
-        stop_times = [1.5, 3.0, 4.5]
-
-        while True:
-            elapsed = time.time() - start_time
-            for i, reel in enumerate(reels):
-                symbol = random.choice(symbols) if elapsed < stop_times[i] else final_symbols[i]
-                reel.markdown(f'<div class="slot">{symbol}</div>', unsafe_allow_html=True)
-            if elapsed >= 4.5:
-                break
-            time.sleep(0.04)
-
-        if final_symbols == ["🍋", "🍋", "🍋"]:
-            reward = 1000
-            st.markdown(
-                '<div class="jackpot"><h1>🍋 JACKPOT 🍋</h1><h2>+ €1,000</h2><h3>PERFECT MATCH!</h3></div>',
-                unsafe_allow_html=True,
-            )
-            st.balloons()
-        elif len(set(final_symbols)) == 1:
-            reward = 500
-        elif len(set(final_symbols)) == 2:
-            reward = 100
-        else:
-            reward = 0
-
-        st.session_state.money = round(st.session_state.money + reward, 2)
-        st.session_state.stats["money_earned"] += reward
-        st.session_state.stats["spins"] += 1
-        st.session_state.last_spin = {"symbols": final_symbols, "reward": reward}
-        st.success(f"{' '.join(final_symbols)} — You won €{reward:,.2f}!")
-        st.metric("Updated balance", f"€{st.session_state.money:,.2f}")
-
-    if st.session_state.last_spin:
-        st.divider()
-        st.caption("LAST RESULT")
-        st.write(
-            "  ".join(st.session_state.last_spin["symbols"])
-            + f" · €{st.session_state.last_spin['reward']:,.2f}"
-        )
-
-    st.caption("🍋 🍋 🍋 = €1,000 · Other triple = €500 · Double = €100 · Other = €0")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ============================================================
-# ROLLS - RNG SYSTEM
-# ============================================================
-
-elif page == "ROLLS":
-    st.markdown('<div class="page-content">', unsafe_allow_html=True)
-    st.title("✨ R O L L S")
-    st.caption("Roll for rare items. Every roll costs €100.")
-    st.warning("Virtual game money only. Drops are random.")
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Rolls made", st.session_state.rolls_count)
-    c2.metric("Money spent", f"€{st.session_state.rolls_spent:,.2f}")
-    c3.metric("Unique drops", len(st.session_state.rolls_inventory))
-
-    st.markdown(
-        '<div style="padding:24px;border:1px solid #8b5cf6;border-radius:18px;'
-        'background:linear-gradient(120deg,#21143e,#101a30);text-align:center">'
-        '<h2>🎲 Ready to roll?</h2><p>Common → Uncommon → Rare → Legendary → Mythical</p>'
-        '</div>',
-        unsafe_allow_html=True,
+    mode = st.radio(
+        "GAMBLING MODES",
+        ["🎰 Money Machine", "✨ ROLLS"],
+        horizontal=True,
+        key="gambling_mode",
+        label_visibility="collapsed",
     )
 
-    st.write("")
-    if st.button("✨ ROLL NOW — €100", type="primary", use_container_width=True):
-        if st.session_state.money < 100:
-            st.error("Not enough money! You need €100.")
-        else:
-            with st.spinner("Rolling..."):
-                time.sleep(0.7)
-                perform_roll()
-            st.rerun()
+    # ---------------- MONEY MACHINE ----------------
 
-    if st.session_state.last_roll:
-        st.divider()
-        show_roll_reveal(st.session_state.last_roll)
+    if mode == "🎰 Money Machine":
+        st.markdown("""
+        <div class="hero">
+          <h2>🎰 Money Machine</h2>
+          <p class="muted">
+            Spin de rollen en probeer een prijs te winnen.
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.divider()
-    st.subheader("📖 Drop collection")
+        if "gamble_last" not in st.session_state:
+            st.session_state.gamble_last = None
 
-    for rarity in ["Common", "Uncommon", "Rare", "Legendary", "Mythical"]:
-        color = RARITY_COLORS[rarity]
-        st.markdown(
-            f"<h3 style='color:{color}'>{rarity}</h3>",
-            unsafe_allow_html=True,
-        )
-        for item in [x for x in ROLL_ITEMS if x["rarity"] == rarity]:
-            owned = st.session_state.rolls_inventory.get(item["name"], 0)
-            animation_label = {
-                "no": "",
-                "yes": " ✨",
-                "super": " 🌟",
-                "supersuper": " 🌌💥",
-            }[item["animation"]]
-            st.write(
-                f"{item['emoji']} **{item['name']}** — 1 in {item['odds']:,}"
-                f"{animation_label} · Owned: {owned}"
+        if st.button("🎰 Spin — €50", type="primary", key="money_machine_spin"):
+            current = get_player(username)
+
+            if not current["infinite_money"] and current["money"] < 50:
+                st.error("Niet genoeg money.")
+            else:
+                if not current["infinite_money"]:
+                    update_player(
+                        username,
+                        money=current["money"] - 50,
+                    )
+
+                symbols = ["🍋", "🍒", "💎", "⭐", "🍀", "7️⃣"]
+                result = [random.choice(symbols) for _ in range(3)]
+
+                if result == ["🍋", "🍋", "🍋"]:
+                    prize = 1000
+                elif len(set(result)) == 1:
+                    prize = 500
+                elif len(set(result)) == 2:
+                    prize = 100
+                else:
+                    prize = 0
+
+                current = get_player(username)
+
+                if prize and not current["infinite_money"]:
+                    update_player(
+                        username,
+                        money=current["money"] + prize,
+                    )
+
+                st.session_state.gamble_last = (result, prize)
+                st.rerun()
+
+        if st.session_state.get("gamble_last"):
+            result, prize = st.session_state.gamble_last
+
+            st.markdown(
+                f"<div class='hero' style='text-align:center;font-size:42px'>"
+                f"{'　'.join(result)}</div>",
+                unsafe_allow_html=True,
             )
 
-    st.markdown("</div>", unsafe_allow_html=True)
+            st.subheader(
+                f"Je won €{prize}!"
+                if prize
+                else "Geen prijs deze keer."
+            )
+
+    # ---------------- ROLLS ----------------
+
+    else:
+        st.markdown("""
+        <div class="hero">
+          <h2>✨ R O L L S</h2>
+          <p class="muted">
+            Elke roll kost 100 money. Hoe hoger de odds,
+            hoe zeldzamer de drop.
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        current = get_player(username)
+        global_luck = get_global_luck()
+        effective_luck = min(
+            MAX_LUCK_PERCENT,
+            current["luck"] + global_luck,
+        )
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Roll price", "100 money")
+        c2.metric("Jouw luck", f"{current['luck']:,.0f}%")
+        c3.metric("Globale luck", f"{global_luck:,.0f}%")
+
+        st.caption(f"Totale actieve luck: {effective_luck:,.0f}%")
+
+        if st.button(
+            "🎲 ROLL — 100 MONEY",
+            type="primary",
+            use_container_width=True,
+            key="integrated_roll",
+        ):
+            current = get_player(username)
+            effective_luck = min(
+                MAX_LUCK_PERCENT,
+                current["luck"] + get_global_luck(),
+            )
+
+            if not current["infinite_money"] and current["money"] < ROLL_COST:
+                st.error("Je hebt niet genoeg money voor een roll.")
+            else:
+                if not current["infinite_money"]:
+                    update_player(
+                        username,
+                        money=current["money"] - ROLL_COST,
+                    )
+
+                drop = roll_item(effective_luck)
+                add_inventory_item(username, drop["name"])
+                save_roll(username, drop)
+                st.session_state.last_drop = drop
+                st.rerun()
+
+        if st.session_state.last_drop:
+            show_reveal(st.session_state.last_drop)
+
+        st.markdown("### 📖 Drop index")
+
+        for rarity in ["Common", "Uncommon", "Rare", "Legendary", "Mythical"]:
+            subset = [
+                item for item in ITEMS
+                if item["rarity"] == rarity
+            ]
+
+            with st.expander(f"{rarity} ({len(subset)} drops)"):
+                for item in subset:
+                    st.write(
+                        f"{item['emoji']} **{item['name']}** — "
+                        f"1/{item['odds']:,} — animation: {item['animation']}"
+                    )
+
 
 # ============================================================
 # INVENTORY
 # ============================================================
 
 elif page == "Inventory":
-    st.markdown('<div class="page-content">', unsafe_allow_html=True)
     st.title("🎒 Inventory")
-    st.caption("Use food and drinks to survive. Your ROLLS drops are collected here too.")
 
-    if not st.session_state.inventory and not st.session_state.rolls_inventory:
-        st.info("Your inventory is empty. Visit the shop or ROLLS.")
+    current = get_player(username)
+    inventory = [
+        x for x in (current["inventory"] or "").split("|")
+        if x
+    ]
+
+    if not inventory:
+        st.info("Je inventory is nog leeg. Ga naar Shop of Gambling → ROLLS.")
     else:
-        if st.session_state.inventory:
-            st.subheader("🛍️ Shop items")
-            for item, quantity in list(st.session_state.inventory.items()):
-                if quantity <= 0:
-                    continue
-                with st.container(border=True):
-                    col1, col2, col3 = st.columns([1, 3, 1])
-                    with col1:
-                        st.markdown(f"<div style='font-size:38px'>{emoji_for(item)}</div>", unsafe_allow_html=True)
-                    with col2:
-                        st.markdown(f"**{pretty_name(item)}**")
-                        st.caption(INFO[item][1])
-                        st.caption(f"Quantity: {quantity}")
-                        if item in FOOD_ITEMS:
-                            st.caption("🍗 Restores 35 hunger")
-                        elif item in DRINK_ITEMS:
-                            st.caption("💧 Restores 40 thirst")
-                    with col3:
-                        if st.button(
-                            "Use" if item in FOOD_ITEMS or item in DRINK_ITEMS or item == "uranium" else "Inspect",
-                            key=f"use_{item}", use_container_width=True,
-                        ):
-                            use_item(item)
+        counts = {}
 
-        st.divider()
-        st.subheader("✨ ROLLS collection")
-        if not st.session_state.rolls_inventory:
-            st.caption("No ROLLS drops yet.")
-        for item in ROLL_ITEMS:
-            quantity = st.session_state.rolls_inventory.get(item["name"], 0)
-            if quantity:
-                color = RARITY_COLORS[item["rarity"]]
-                st.markdown(
-                    f"<div style='padding:12px;margin:6px 0;border:1px solid {color};"
-                    f"border-radius:12px;background:#171329'>"
-                    f"{item['emoji']} <b>{html.escape(item['name'])}</b> — "
-                    f"<span style='color:{color}'>{item['rarity']}</span>"
-                    f" · 1 in {item['odds']:,} · Owned: {quantity}</div>",
-                    unsafe_allow_html=True,
-                )
-    st.markdown("</div>", unsafe_allow_html=True)
+        for item in inventory:
+            counts[item] = counts.get(item, 0) + 1
+
+        for name, count in sorted(counts.items()):
+            st.write(f"• **{name}** × {count}")
+
+    st.markdown("### Recentste ROLLS")
+    history = recent_rolls(username)
+
+    if history:
+        for roll in history:
+            color = RARITY_COLORS.get(roll["rarity"], "#ffffff")
+
+            st.markdown(
+                f"<div style='padding:10px;margin:6px 0;"
+                f"border:1px solid {color};border-radius:10px'>"
+                f"<b>{html.escape(roll['item_name'])}</b> · "
+                f"{html.escape(roll['rarity'])} · "
+                f"1/{roll['odds']:,}<br>"
+                f"<small>{html.escape(roll['rolled_at'])}</small></div>",
+                unsafe_allow_html=True,
+            )
+    else:
+        st.caption("Je hebt nog geen ROLLS gedaan.")
+
 
 # ============================================================
 # STATS
 # ============================================================
 
 elif page == "Stats":
-    st.markdown('<div class="page-content">', unsafe_allow_html=True)
-    st.title("📊 Statistics")
+    st.title("📊 Stats")
 
-    c1, c2 = st.columns(2)
-    c1.metric("Current balance", f"€{st.session_state.money:,.2f}")
-    c2.metric("Shop items bought", st.session_state.stats["items_bought"])
+    current = get_player(username)
+    history = recent_rolls(username, 10000)
 
-    c3, c4 = st.columns(2)
-    c3.metric("Gambling spins", st.session_state.stats["spins"])
-    c4.metric("Gambling earnings", f"€{st.session_state.stats['money_earned']:,.2f}")
+    st.metric("Totaal opgeslagen rolls", len(history))
+    st.metric(
+        "Verschillende drops",
+        len(set(x["item_name"] for x in history)),
+    )
+    st.metric("Persoonlijke luck", f"{current['luck']:,.0f}%")
+    st.metric("Globale luck", f"{get_global_luck():,.0f}%")
 
-    st.divider()
-    st.subheader("✨ ROLLS statistics")
-    r1, r2, r3 = st.columns(3)
-    r1.metric("Rolls made", st.session_state.rolls_count)
-    r2.metric("Money spent", f"€{st.session_state.rolls_spent:,.2f}")
-    r3.metric("Unique drops", len(st.session_state.rolls_inventory))
+    if history:
+        st.markdown("### Laatste 10 drops")
 
-    st.divider()
-    st.subheader("Survival status")
-    st.write(f"Hunger: {int(st.session_state.hunger)}%")
-    st.progress(int(st.session_state.hunger))
-    st.write(f"Thirst: {int(st.session_state.thirst)}%")
-    st.progress(int(st.session_state.thirst))
+        for roll in history[:10]:
+            st.write(
+                f"{roll['item_name']} — {roll['rarity']} — "
+                f"1/{roll['odds']:,}"
+            )
 
-    st.divider()
-    st.subheader("Drop collection")
-    if st.session_state.rolls_inventory:
-        for item in ROLL_ITEMS:
-            quantity = st.session_state.rolls_inventory.get(item["name"], 0)
-            if quantity:
-                st.write(
-                    f"{item['emoji']} {item['name']} × {quantity} "
-                    f"— {item['rarity']} — 1/{item['odds']:,}"
-                )
+
+# ============================================================
+# CODE TAB
+# ============================================================
+
+elif page == "Code":
+    st.title("🔐 Code")
+    st.caption("Voer de admin-code in om Admin Panel te ontgrendelen.")
+
+    if not st.session_state.admin_logged_in:
+        with st.form("admin_login"):
+            code = st.text_input(
+                "Admin code",
+                type="password",
+                placeholder="Voer code in...",
+            )
+            submitted = st.form_submit_button("Unlock admin")
+
+        if submitted:
+            if code == ADMIN_CODE:
+                st.session_state.admin_logged_in = True
+                st.success("Admin Panel ontgrendeld!")
+                st.rerun()
+            else:
+                st.error("Verkeerde code.")
     else:
-        st.caption("No ROLLS drops collected yet.")
+        st.success("Admin Panel is ontgrendeld.")
+        st.info("Klik links op **Admin Panel** om de beheeropties te openen.")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        if st.button("Uitloggen als admin"):
+            st.session_state.admin_logged_in = False
+            st.rerun()
+
+
+# ============================================================
+# ADMIN PANEL
+# ============================================================
+
+elif page == "Admin Panel":
+    if not st.session_state.admin_logged_in:
+        st.error("Voer eerst de admin-code in.")
+        st.stop()
+
+    # Compact paneel in het midden, geen fullscreen overlay.
+    left, panel, right = st.columns([1, 2.4, 1])
+
+    with panel:
+        st.markdown("""
+        <div class="hero">
+          <h2>🛡️ Admin Panel</h2>
+          <p class="muted">
+            Beheer geld, luck en globale berichten.
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button("Uitloggen als admin", key="admin_logout_panel"):
+            st.session_state.admin_logged_in = False
+            st.rerun()
+
+        # ---------------- GELD GEVEN ----------------
+
+        st.markdown("### 💰 Money geven")
+
+        players = all_players()
+        names = [p["username"] for p in players]
+
+        if names:
+            target = st.selectbox(
+                "Kies speler",
+                names,
+                key="admin_money_target",
+            )
+
+            amount = st.number_input(
+                "Bedrag om toe te voegen",
+                min_value=0,
+                max_value=10**12,
+                value=1000,
+                step=100,
+                key="admin_money_amount",
+            )
+
+            if st.button(
+                "Geef money",
+                type="primary",
+                use_container_width=True,
+            ):
+                target_player = get_player(target)
+
+                if target_player and not target_player["infinite_money"]:
+                    update_player(
+                        target,
+                        money=target_player["money"] + amount,
+                    )
+
+                st.success(f"€{amount:,.0f} toegevoegd aan {target}.")
+                st.rerun()
+        else:
+            st.info("Nog geen spelers.")
+
+        st.divider()
+
+        # ---------------- PERSOONLIJKE LUCK ----------------
+
+        st.markdown("### 🍀 Luck voor één speler")
+
+        players = all_players()
+        names = [p["username"] for p in players]
+
+        if names:
+            target_luck = st.selectbox(
+                "Speler voor persoonlijke luck",
+                names,
+                key="admin_luck_target",
+            )
+
+            luck_value = st.number_input(
+                "Persoonlijke luck (%)",
+                min_value=0,
+                max_value=MAX_LUCK_PERCENT,
+                value=100,
+                step=100,
+                key="admin_luck_value",
+            )
+
+            if st.button(
+                "Bewaar persoonlijke luck",
+                use_container_width=True,
+            ):
+                update_player(target_luck, luck=float(luck_value))
+                st.success(
+                    f"{target_luck} heeft nu {luck_value:,.0f}% persoonlijke luck."
+                )
+                st.rerun()
+
+        st.divider()
+
+        # ---------------- GLOBALE LUCK ----------------
+
+        st.markdown("### 🌍 Globale luck")
+
+        global_luck_value = st.number_input(
+            "Luck voor ALLE spelers (%)",
+            min_value=0,
+            max_value=MAX_LUCK_PERCENT,
+            value=int(get_global_luck()),
+            step=100,
+            key="admin_global_luck_value",
+        )
+
+        if st.button(
+            "Pas globale luck toe",
+            use_container_width=True,
+        ):
+            set_global_luck(global_luck_value)
+            st.success(
+                f"Globale luck ingesteld op {global_luck_value:,.0f}%."
+            )
+            st.rerun()
+
+        st.caption(
+            "Globale luck wordt bij de persoonlijke luck opgeteld "
+            "wanneer iemand een roll doet."
+        )
+
+        st.divider()
+
+        # ---------------- GLOBALE BERICHTEN ----------------
+
+        st.markdown("### 📣 Globaal bericht sturen")
+
+        with st.form("global_message_form", clear_on_submit=True):
+            global_message = st.text_area(
+                "Bericht voor alle spelers",
+                max_chars=300,
+                placeholder="Bijv. Event gestart! Dubbele luck voor iedereen...",
+            )
+
+            send_message = st.form_submit_button(
+                "Verstuur globaal bericht",
+                use_container_width=True,
+            )
+
+        if send_message:
+            if send_global_message(username, global_message):
+                st.success(
+                    "Bericht opgeslagen. Spelers zien het wanneer "
+                    "hun app wordt vernieuwd of opnieuw geladen."
+                )
+                st.rerun()
+            else:
+                st.error("Typ eerst een bericht.")
+
+        st.divider()
+
+        # ---------------- INFINITE MONEY ----------------
+
+        st.markdown("### ♾️ Infinite money")
+
+        own_player = get_player(username)
+
+        enable_inf = st.toggle(
+            "Infinite money voor mijn speler",
+            value=bool(own_player["infinite_money"]),
+        )
+
+        if st.button(
+            "Bewaar infinite money-instelling",
+            use_container_width=True,
+        ):
+            update_player(
+                username,
+                infinite_money=int(enable_inf),
+            )
+            st.success("Infinite money-instelling bijgewerkt.")
+            st.rerun()
+
+        st.divider()
+
+        # ---------------- SPELERSOVERZICHT ----------------
+
+        st.markdown("### 🧾 Spelersoverzicht")
+        st.dataframe(
+            all_players(),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        st.markdown("### 🎲 Drops aanpassen")
+        st.caption(
+            "Drop-namen en odds staan bovenaan in de ITEMS-lijst in app.py."
+        )
+
+
+st.sidebar.markdown("---")
+st.sidebar.caption("Demo build • virtuele game-economie")
