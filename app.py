@@ -1,189 +1,269 @@
 
 import random
+import streamlit as st
 
+st.set_page_config(
+    page_title="My Shop",
+    page_icon="🛒",
+    layout="wide"
+)
 
-shop = {
-    # Food
-    "bread": [4.99, 15],
-    "cheese": [6.99, 23],
-    "cola": [2.67, 36],
-    "pancakes": [3.25, 36],
-    "pizza": [8.99, 20],
-    "burger": [6.50, 25],
-    "fries": [3.49, 30],
-    "chocolate": [2.99, 40],
-    "cookie": [1.25, 50],
-    "cake": [5.99, 15],
-    "apple": [0.75, 60],
-    "banana": [0.60, 60],
-    "water": [1.00, 50],
-    "energy_drink": [3.50, 25],
+# ---------- GAME DATA ----------
 
-    # Electronics
-    "headphones": [49.99, 10],
-    "keyboard": [79.99, 8],
-    "mouse": [39.99, 12],
-    "monitor": [199.99, 5],
-    "phone": [699.99, 4],
-    "laptop": [999.99, 3],
-    "gaming_pc": [1499.99, 2],
-    "controller": [59.99, 10],
+if "money" not in st.session_state:
+    st.session_state.money = 250.00
 
-    # Clothing
-    "tshirt": [19.99, 20],
-    "hoodie": [49.99, 15],
-    "jeans": [39.99, 18],
-    "sneakers": [89.99, 10],
-    "cap": [14.99, 20],
+if "shop" not in st.session_state:
+    st.session_state.shop = {
+        # Food
+        "bread": [4.99, 15],
+        "cheese": [6.99, 23],
+        "cola": [2.67, 36],
+        "pancakes": [3.25, 36],
+        "pizza": [8.99, 20],
+        "burger": [6.50, 25],
+        "fries": [3.49, 30],
+        "chocolate": [2.99, 40],
+        "cookie": [1.25, 50],
+        "cake": [5.99, 15],
+        "apple": [0.75, 60],
+        "banana": [0.60, 60],
+        "water": [1.00, 50],
+        "energy_drink": [3.50, 25],
 
-    # Gaming
-    "minecraft": [29.99, 10],
-    "gaming_chair": [249.99, 4],
-    "gaming_desk": [179.99, 5],
-    "microphone": [69.99, 8],
-    "webcam": [49.99, 10],
+        # Electronics
+        "headphones": [49.99, 10],
+        "keyboard": [79.99, 8],
+        "mouse": [39.99, 12],
+        "monitor": [199.99, 5],
+        "phone": [699.99, 4],
+        "laptop": [999.99, 3],
+        "gaming_pc": [1499.99, 2],
+        "controller": [59.99, 10],
 
-    # Rare items
-    "diamond": [499.99, 3],
-    "gold_bar": [999.99, 2],
-    "mystery_box": [24.99, 20],
-    "legendary_trophy": [2499.99, 1]
+        # Clothing
+        "tshirt": [19.99, 20],
+        "hoodie": [49.99, 15],
+        "jeans": [39.99, 18],
+        "sneakers": [89.99, 10],
+        "cap": [14.99, 20],
+
+        # Gaming
+        "minecraft": [29.99, 10],
+        "gaming_chair": [249.99, 4],
+        "gaming_desk": [179.99, 5],
+        "microphone": [69.99, 8],
+        "webcam": [49.99, 10],
+
+        # Rare items
+        "diamond": [499.99, 3],
+        "gold_bar": [999.99, 2],
+        "mystery_box": [24.99, 20],
+        "legendary_trophy": [2499.99, 1]
+    }
+
+if "inventory" not in st.session_state:
+    st.session_state.inventory = {}
+
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+# ---------- DESIGN ----------
+
+st.markdown("""
+<style>
+.stApp {
+    background-color: #0b1020;
 }
+h1, h2, h3 {
+    color: #93c5fd;
+}
+div[data-testid="stMetric"] {
+    background: #17233d;
+    padding: 16px;
+    border-radius: 12px;
+}
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    border-color: #334155;
+    border-radius: 14px;
+}
+</style>
+""", unsafe_allow_html=True)
 
+st.title("🛒 My Shop")
+st.caption("Buy items, earn money and build your collection.")
 
-money = 250.00
+st.metric(
+    "💰 Your money",
+    f"€{st.session_state.money:,.2f}"
+)
 
+page = st.sidebar.radio(
+    "Navigation",
+    ["Shop", "Money Machine", "Inventory"]
+)
 
-def show_shop():
-    print("\n===== SHOP =====")
+# ---------- SHOP ----------
 
-    for item, stats in shop.items():
-        price = stats[0]
-        stock = stats[1]
+if page == "Shop":
+    st.header("🛍️ Store")
 
-        print(f"{item}: €{price:.2f} | {stock} in stock")
+    search = st.text_input("🔎 Search for an item")
 
+    categories = {
+        "All items": list(st.session_state.shop.keys()),
+        "Food": [
+            "bread", "cheese", "cola", "pancakes",
+            "pizza", "burger", "fries", "chocolate",
+            "cookie", "cake", "apple", "banana",
+            "water", "energy_drink"
+        ],
+        "Electronics": [
+            "headphones", "keyboard", "mouse", "monitor",
+            "phone", "laptop", "gaming_pc", "controller"
+        ],
+        "Clothing": [
+            "tshirt", "hoodie", "jeans", "sneakers", "cap"
+        ],
+        "Gaming": [
+            "minecraft", "gaming_chair", "gaming_desk",
+            "microphone", "webcam"
+        ],
+        "Rare items": [
+            "diamond", "gold_bar", "mystery_box",
+            "legendary_trophy"
+        ]
+    }
 
-def buy_item():
-    global money
+    category = st.selectbox(
+        "Category",
+        list(categories.keys())
+    )
 
-    show_shop()
+    items = [
+        name for name in categories[category]
+        if search.lower() in name.lower()
+    ]
 
-    items_wanted = input(
-        "\nChoose an item (or type back): "
-    ).lower().strip()
+    if not items:
+        st.info("No items found.")
 
-    if items_wanted == "back":
-        return
+    for start in range(0, len(items), 3):
+        columns = st.columns(3)
 
-    if items_wanted not in shop:
-        print("This item is not in the shop.")
-        return
+        for col, name in zip(columns, items[start:start + 3]):
+            with col:
+                price, stock = st.session_state.shop[name]
 
-    price = shop[items_wanted][0]
-    stock = shop[items_wanted][1]
+                with st.container(border=True):
+                    st.subheader(name.replace("_", " ").title())
+                    st.markdown(f"### €{price:.2f}")
+                    st.write(f"📦 Stock: {stock}")
 
-    print(f"Price: €{price:.2f}")
-    print(f"In stock: {stock}")
+                    quantity = st.number_input(
+                        "Quantity",
+                        min_value=1,
+                        max_value=max(1, stock),
+                        value=1,
+                        step=1,
+                        key=f"quantity_{name}",
+                        disabled=stock == 0
+                    )
 
-    try:
-        amount_wanted = int(
-            input("How many do you want? ")
+                    if stock == 0:
+                        st.error("Out of stock")
+
+                    if st.button(
+                        "Buy item",
+                        key=f"buy_{name}",
+                        use_container_width=True,
+                        disabled=stock == 0
+                    ):
+                        total = round(price * quantity, 2)
+
+                        if total > st.session_state.money:
+                            st.error(
+                                f"You need €{total - st.session_state.money:.2f} more."
+                            )
+                        else:
+                            st.session_state.money = round(
+                                st.session_state.money - total, 2
+                            )
+
+                            st.session_state.shop[name][1] -= quantity
+
+                            inventory = st.session_state.inventory
+                            inventory[name] = (
+                                inventory.get(name, 0) + quantity
+                            )
+
+                            st.session_state.history.append(
+                                f"Bought {quantity}x {name} for €{total:.2f}"
+                            )
+
+                            st.session_state.notice = (
+                                f"Successfully bought {quantity}x "
+                                f"{name.replace('_', ' ')}!"
+                            )
+                            st.rerun()
+
+    if "notice" in st.session_state:
+        st.success(st.session_state.pop("notice"))
+
+# ---------- FREE MONEY MACHINE ----------
+
+elif page == "Money Machine":
+    st.header("💰 Free Money Machine")
+    st.write("Spin for free. You cannot lose money!")
+
+    st.info("Every spin gives you at least €5.")
+
+    if st.button("🎰 SPIN THE MACHINE", use_container_width=True):
+        reward = random.choices(
+            [5, 10, 20, 50, 100],
+            weights=[40, 30, 20, 8, 2]
+        )[0]
+
+        st.session_state.money = round(
+            st.session_state.money + reward, 2
         )
-    except ValueError:
-        print("Please enter a valid whole number.")
-        return
 
-    if amount_wanted <= 0:
-        print("You must buy at least 1 item.")
-        return
+        st.session_state.history.append(
+            f"Money Machine: +€{reward:.2f}"
+        )
 
-    if amount_wanted > stock:
-        print("There is not enough of this item.")
-        return
+        st.success(f"You earned €{reward:.2f}!")
+        st.rerun()
 
-    total = round(price * amount_wanted, 2)
+# ---------- INVENTORY ----------
 
-    if total > money:
-        print(f"You need €{total - money:.2f} more.")
-        return
+elif page == "Inventory":
+    st.header("🎒 Your Inventory")
 
-    confirm = input(
-        f"Total: €{total:.2f}. Type buy to confirm: "
-    ).lower().strip()
+    inventory = st.session_state.inventory
 
-    if confirm != "buy":
-        print("Purchase cancelled.")
-        return
-
-    money = round(money - total, 2)
-    shop[items_wanted][1] -= amount_wanted
-
-    print(f"You bought {amount_wanted}x {items_wanted}!")
-    print(f"Money left: €{money:.2f}")
-
-
-def money_machine():
-    global money
-
-    print("\n===== MONEY MACHINE =====")
-    print("Free to use!")
-    print("You cannot lose money.")
-    input("Press ENTER to spin the machine...")
-
-    reward = random.randint(1, 100)
-
-    if reward <= 40:
-        winnings = 5.00
-    elif reward <= 70:
-        winnings = 10.00
-    elif reward <= 90:
-        winnings = 20.00
-    elif reward <= 98:
-        winnings = 50.00
+    if not inventory:
+        st.info("Your inventory is empty. Buy something in the shop!")
     else:
-        winnings = 100.00
+        for name, quantity in inventory.items():
+            st.write(
+                f"**{name.replace('_', ' ').title()}** × {quantity}"
+            )
 
-    money = round(money + winnings, 2)
+    st.divider()
+    st.subheader("📦 Remaining Shop Stock")
 
-    print("\nThe machine stopped!")
-    print(f"You won €{winnings:.2f}!")
-    print(f"Your balance is now €{money:.2f}")
+    for name, (price, stock) in st.session_state.shop.items():
+        st.write(
+            f"{name.replace('_', ' ').title()} — "
+            f"€{price:.2f} — {stock} left"
+        )
 
+    st.divider()
+    st.subheader("📜 Transaction History")
 
-def show_inventory():
-    print("\n===== INVENTORY / SHOP STOCK =====")
-
-    for item, stats in shop.items():
-        print(f"{item}: {stats[1]} left in the shop")
-
-    print(f"\nYour money: €{money:.2f}")
-
-
-# MAIN GAME LOOP
-while True:
-    print("\n==========================")
-    print(f"       MONEY: €{money:.2f}")
-    print("==========================")
-    print("1. Shop")
-    print("2. Free Money Machine")
-    print("3. View Stock")
-    print("4. Quit")
-
-    choice = input("\nChoose an option: ").strip()
-
-    if choice == "1":
-        buy_item()
-
-    elif choice == "2":
-        money_machine()
-
-    elif choice == "3":
-        show_inventory()
-
-    elif choice == "4":
-        print("Thanks for playing!")
-        break
-
+    if st.session_state.history:
+        for entry in reversed(st.session_state.history):
+            st.write(f"• {entry}")
     else:
-        print("Invalid option. Choose 1, 2, 3 or 4.")
+        st.info("No transactions yet.")
