@@ -3,16 +3,9 @@ import streamlit as st
 import random
 import time
 
-st.set_page_config(
-    page_title="Game Shop",
-    page_icon="◈",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="Game Shop", page_icon="🎮", layout="wide")
 
-# -----------------------------
-# DATA
-# -----------------------------
+# -------------------- SHOP DATA --------------------
 
 START_SHOP = {
     "bread": [4.99, 15],
@@ -59,23 +52,23 @@ START_SHOP = {
 }
 
 CATEGORIES = {
-    "Food & Drinks": [
+    "🍔 Food & Drinks": [
         "bread", "cheese", "cola", "pancakes", "pizza",
         "burger", "fries", "chocolate", "cookie", "cake",
         "apple", "banana", "water", "energy_drink",
     ],
-    "Electronics": [
+    "💻 Electronics": [
         "headphones", "keyboard", "mouse", "monitor",
         "phone", "laptop", "gaming_pc", "controller",
     ],
-    "Clothing": [
+    "👕 Clothing": [
         "tshirt", "hoodie", "jeans", "sneakers", "cap",
     ],
-    "Gaming": [
+    "🎮 Gaming": [
         "minecraft", "gaming_chair", "gaming_desk",
         "microphone", "webcam",
     ],
-    "Rare & Unusual": [
+    "💎 Rare Items": [
         "diamond", "gold_bar", "mystery_box",
         "legendary_trophy", "uranium",
     ],
@@ -122,20 +115,22 @@ INFO = {
     "gold_bar": ("🥇", "A precious gold bar.", False),
     "mystery_box": ("🎁", "What's inside? It's a mystery.", False),
     "legendary_trophy": ("🏆", "An extremely rare trophy.", False),
-    "uranium": ("☢️", "Don't taste this. Fictional game item.", False),
+    "uranium": ("☢️", "Don't taste this.", False),
 }
 
-# -----------------------------
-# SESSION STATE
-# -----------------------------
+# -------------------- SESSION STATE --------------------
 
 if "money" not in st.session_state:
     st.session_state.money = 250.00
 
 if "shop" not in st.session_state:
     st.session_state.shop = {
-        k: v.copy() for k, v in START_SHOP.items()
+        key: value.copy() for key, value in START_SHOP.items()
     }
+
+# Add new items to existing sessions too.
+for item, data in START_SHOP.items():
+    st.session_state.shop.setdefault(item, data.copy())
 
 if "inventory" not in st.session_state:
     st.session_state.inventory = {}
@@ -149,6 +144,9 @@ if "last_spin" not in st.session_state:
 if "game_over" not in st.session_state:
     st.session_state.game_over = False
 
+if "death_sequence_done" not in st.session_state:
+    st.session_state.death_sequence_done = False
+
 if "stats" not in st.session_state:
     st.session_state.stats = {
         "items_bought": 0,
@@ -156,141 +154,143 @@ if "stats" not in st.session_state:
         "money_earned": 0.0,
     }
 
-# -----------------------------
-# CLEAN DESIGN
-# -----------------------------
+# -------------------- CSS DESIGN --------------------
 
 st.markdown("""
 <style>
 .stApp {
-    background: #111310;
-    color: #e8e9e3;
+    background:
+        radial-gradient(ellipse at top left, #38106a 0%, transparent 38%),
+        radial-gradient(ellipse at bottom right, #063e54 0%, transparent 38%),
+        #10101b;
+    color: #f7f2ff;
 }
 
 [data-testid="stSidebar"] {
-    background: #191b17;
-    border-right: 1px solid #30332c;
-}
-
-[data-testid="stSidebar"] * {
-    color: #e8e9e3;
+    background: #191329;
+    border-right: 2px solid #8c36d9;
 }
 
 h1, h2, h3 {
-    letter-spacing: -0.7px;
-    color: #f0f0e9;
-}
-
-p, label {
-    color: #c2c5ba;
+    color: #ffffff;
+    letter-spacing: -0.5px;
 }
 
 div[data-testid="stMetric"] {
-    background: #1c1f19;
-    border: 1px solid #35392f;
+    background: #201832;
+    border: 1px solid #7338a8;
     padding: 16px;
-    border-radius: 12px;
-}
-
-div[data-testid="stVerticalBlockBorderWrapper"] {
-    background: #191c17;
-    border: 1px solid #30342c;
     border-radius: 14px;
 }
 
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(31, 23, 49, 0.94);
+    border: 1px solid #563b78;
+    border-radius: 15px;
+}
+
 div.stButton > button {
-    background: #282c24;
-    color: #eeeeE7;
-    border: 1px solid #454a3e;
-    border-radius: 9px;
-    transition: background 0.2s ease, transform 0.2s ease;
+    background: linear-gradient(110deg, #7727d5, #bd26a7);
+    color: white;
+    border: 1px solid #d58cff;
+    border-radius: 10px;
+    font-weight: 650;
+    transition: transform 0.18s ease, filter 0.18s ease;
 }
 
 div.stButton > button:hover {
-    background: #373d30;
-    border-color: #929982;
-    transform: translateY(-1px);
-}
-
-.shop-item {
-    text-align: left;
-    padding: 5px 2px;
+    filter: brightness(1.2);
+    transform: translateY(-2px);
+    border-color: #ffffff;
 }
 
 .item-emoji {
-    font-size: 35px;
-    margin-bottom: 9px;
+    font-size: 42px;
+    margin-bottom: 8px;
 }
 
 .item-name {
     font-size: 16px;
-    font-weight: 650;
+    font-weight: 700;
     overflow-wrap: anywhere;
 }
 
 .item-price {
+    color: #50f0e1;
+    font-weight: 700;
     margin-top: 6px;
-    font-size: 14px;
-    color: #c3c9ad;
 }
 
 .item-stock {
-    color: #93988b;
+    color: #b5a9ca;
     font-size: 12px;
     margin-top: 4px;
 }
 
 .slot {
-    background: #20231c;
-    border: 1px solid #646c52;
-    border-radius: 12px;
+    background: linear-gradient(145deg, #251a3f, #121b34);
+    border: 2px solid #a84cff;
+    border-radius: 16px;
     padding: 18px 3px;
     text-align: center;
-    font-size: 45px;
-    min-height: 100px;
+    font-size: 48px;
+    min-height: 110px;
+    box-shadow: 0 0 12px #6824a833;
 }
 
 @keyframes page-enter {
-    from { opacity: 0.35; transform: translateY(5px); }
+    from { opacity: 0.3; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes jackpot-glow {
-    0%, 100% { box-shadow: 0 0 0 #d6db9d; }
-    50% { box-shadow: 0 0 28px #d6db9d; }
-}
-
-@keyframes green-nausea {
-    0% { filter: hue-rotate(0deg); transform: translateX(0); }
-    25% { filter: hue-rotate(75deg); transform: translateX(-3px); }
-    50% { filter: hue-rotate(135deg); transform: translateX(3px); }
-    75% { filter: hue-rotate(65deg); transform: translateX(-2px); }
-    100% { filter: hue-rotate(0deg); transform: translateX(0); }
-}
-
-@keyframes fade-to-black {
-    from { background: #242b1c; opacity: 0.15; }
-    to { background: #000000; opacity: 1; }
 }
 
 .page-content {
     animation: page-enter 0.35s ease-out;
 }
 
+@keyframes jackpot-glow {
+    0%, 100% {
+        box-shadow: 0 0 8px #ffdd45;
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 38px #ff9d00;
+        transform: scale(1.015);
+    }
+}
+
 .jackpot {
-    border: 1px solid #d6db9d;
-    border-radius: 16px;
-    padding: 22px;
+    background: linear-gradient(135deg, #541a8b, #a51b87, #df7914);
+    border: 2px solid #ffe56a;
+    border-radius: 18px;
+    padding: 24px;
     text-align: center;
-    animation: jackpot-glow 1s ease-in-out infinite;
+    animation: jackpot-glow 0.8s ease-in-out infinite;
+}
+
+@keyframes nausea {
+    0% { filter: hue-rotate(0deg); transform: translateX(0); }
+    25% { filter: hue-rotate(100deg); transform: translateX(-3px); }
+    50% { filter: hue-rotate(180deg); transform: translateX(3px); }
+    75% { filter: hue-rotate(80deg); transform: translateX(-2px); }
+    100% { filter: hue-rotate(0deg); transform: translateX(0); }
+}
+
+.nausea-screen {
+    background: #243d19;
+    color: #eaffd9;
+    padding: 28px;
+    border-radius: 15px;
+    border: 2px solid #91d62e;
+    animation: nausea 0.5s infinite;
+    text-align: center;
 }
 
 .game-over {
     background: #050505;
     color: white;
-    padding: 42px 22px;
+    padding: 45px 22px;
     text-align: center;
-    border: 1px solid #353535;
+    border: 1px solid #333;
     border-radius: 12px;
 }
 
@@ -299,21 +299,15 @@ div[role="radiogroup"] {
 }
 
 div[role="radiogroup"] label {
-    background: #20231c;
-    border: 1px solid #34382f;
-    padding: 10px 12px;
+    background: #211831;
+    border: 1px solid #633b91;
+    padding: 10px;
     border-radius: 9px;
-}
-
-hr {
-    border-color: #30342c;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# -----------------------------
-# HELPERS
-# -----------------------------
+# -------------------- HELPERS --------------------
 
 def pretty_name(item):
     return item.replace("_", " ").title()
@@ -325,21 +319,19 @@ def buy_item(item, quantity):
     price, stock = st.session_state.shop[item]
     total = round(price * quantity, 2)
 
-    if stock < quantity:
+    if quantity < 1 or stock < quantity:
         st.session_state.notice = ("error", "Not enough stock.")
     elif st.session_state.money < total:
         st.session_state.notice = ("error", "Not enough money.")
     else:
-        st.session_state.money = round(
-            st.session_state.money - total, 2
-        )
+        st.session_state.money = round(st.session_state.money - total, 2)
         st.session_state.shop[item][1] -= quantity
         st.session_state.inventory[item] = (
             st.session_state.inventory.get(item, 0) + quantity
         )
         st.session_state.stats["items_bought"] += quantity
         st.session_state.notice = (
-            "success", f"Bought {quantity} × {pretty_name(item)}."
+            "success", f"Bought {quantity} × {pretty_name(item)}!"
         )
 
 def use_item(item):
@@ -350,11 +342,12 @@ def use_item(item):
         return
 
     if item == "uranium":
-        # Fictional game effect only; no real-world instructions.
+        # Fictional game-over effect.
         st.session_state.inventory[item] -= 1
         if st.session_state.inventory[item] <= 0:
             del st.session_state.inventory[item]
         st.session_state.game_over = True
+        st.session_state.death_sequence_done = False
         st.rerun()
 
     can_eat = INFO.get(item, ("", "", False))[2]
@@ -364,167 +357,109 @@ def use_item(item):
         if st.session_state.inventory[item] <= 0:
             del st.session_state.inventory[item]
         st.session_state.notice = (
-            "success", f"You used {pretty_name(item)}."
+            "success", f"You used {pretty_name(item)}!"
         )
     else:
         st.session_state.notice = (
             "info", INFO.get(item, ("", "You inspected this item.", False))[1]
         )
 
-# -----------------------------
-# ITEM DETAIL DIALOG
-# -----------------------------
+# -------------------- ITEM POP-UP --------------------
 
 @st.dialog("Item details", width="small")
 def item_dialog(item):
     price, stock = st.session_state.shop[item]
-    emoji, description, consumable = INFO[item]
+    emoji, description, _ = INFO[item]
 
     st.markdown(
-        f"<div style='font-size:75px;text-align:center'>{emoji}</div>",
+        f"<div style='font-size:80px;text-align:center'>{emoji}</div>",
         unsafe_allow_html=True
     )
     st.subheader(pretty_name(item))
     st.write(description)
-    st.markdown(f"**€{price:,.2f}**")
-    st.caption(f"{stock} in stock")
 
     if item == "uranium":
-        st.warning("Don't taste this. This is a fictional game item.")
+        st.warning("☢️ Don't taste this.")
+
+    st.markdown(f"### €{price:,.2f}")
+    st.caption(f"{stock} available in stock")
 
     if stock > 0:
-        qty = st.number_input(
+        quantity = st.number_input(
             "Quantity",
             min_value=1,
             max_value=stock,
             value=1,
-            key=f"qty_{item}"
+            key=f"quantity_{item}",
         )
-
-        if st.button("Buy item", use_container_width=True):
-            buy_item(item, qty)
+        if st.button("🛒 Buy item", use_container_width=True):
+            buy_item(item, quantity)
             st.rerun()
 
-# -----------------------------
-# HEADER
-# -----------------------------
-
-if not st.session_state.game_over:
-    top_left, top_right = st.columns([3, 1])
-
-    with top_left:
-        st.markdown("# ◈ GAME SHOP")
-        st.caption("A little shop. A bigger collection.")
-
-    with top_right:
-        st.metric("BALANCE", f"€{st.session_state.money:,.2f}")
-
-    if st.session_state.notice:
-        kind, message = st.session_state.notice
-        if kind == "success":
-            st.success(message)
-        elif kind == "error":
-            st.error(message)
-        else:
-            st.info(message)
-        st.session_state.notice = None
-
-# -----------------------------
-# NAVIGATION
-# -----------------------------
+# -------------------- NAVIGATION --------------------
 
 page = st.sidebar.radio(
-    "MENU",
+    "NAVIGATION",
     ["Shop", "Money Machine", "Inventory", "Stats"],
     format_func=lambda p: {
-        "Shop": "◈   Shop",
-        "Money Machine": "◎   Money Machine",
-        "Inventory": "▤   Inventory",
-        "Stats": "▥   Stats",
+        "Shop": "🛍️   Shop",
+        "Money Machine": "🎰   Money Machine",
+        "Inventory": "🎒   Inventory",
+        "Stats": "📊   Stats",
     }[p],
 )
 
 st.sidebar.divider()
-st.sidebar.caption("YOUR ACCOUNT")
-st.sidebar.metric("Balance", f"€{st.session_state.money:,.2f}")
-st.sidebar.caption("Your progress is stored for this session.")
+st.sidebar.metric("💰 Balance", f"€{st.session_state.money:,.2f}")
+st.sidebar.caption("Your game. Your collection.")
 
-# -----------------------------
-# GAME OVER EFFECT
-# -----------------------------
+# -------------------- GAME OVER --------------------
 
 if st.session_state.game_over:
-    st.markdown("# ")
-    effect = st.empty()
+    st.markdown("# ☢️ Critical game status")
 
-    st.markdown(
-        """
-        <div style="
-            position:fixed; inset:0; z-index:9999;
-            background:#000; pointer-events:none;
-            animation:fade-to-black 10s linear forwards;">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    if not st.session_state.death_sequence_done:
+        screen = st.empty()
 
-    st.markdown(
-        """
-        <div style="
-            background:#27301c;
-            color:#e4e8d9;
-            padding:30px;
-            border-radius:12px;
-            text-align:center;
-            animation:green-nausea 0.45s infinite;">
-            <h1>⚠ GAME STATUS CRITICAL</h1>
-            <p>Fictional status effect activated.</p>
-            <p>Preparing game-over screen...</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        # The green nausea effect lasts 15 seconds.
+        for second in range(15):
+            if second < 10:
+                screen.markdown(
+                    f"""
+                    <div class="nausea-screen">
+                        <h2>SYSTEM FAILURE</h2>
+                        <p>Fictional game effect...</p>
+                        <h3>{second + 1}/15</h3>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            else:
+                # Black fade begins after 10 seconds.
+                opacity = min((second - 9) / 5, 1)
+                screen.markdown(
+                    f"""
+                    <div style="
+                        background:rgba(0,0,0,{opacity});
+                        color:white;padding:40px;text-align:center;
+                        border-radius:12px;min-height:180px;">
+                        <h2>CONNECTION LOST</h2>
+                        <p>Game session ending...</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            time.sleep(1)
 
-    # Green screen effect for 10 seconds.
-    for second in range(10):
-        effect.markdown(
-            f"""
-            <div style="
-                background:rgba(80,110,30,{0.12 + (second % 3) * 0.06});
-                border:1px solid #555f36;
-                padding:8px;border-radius:8px;text-align:center;">
-                SYSTEM FAILURE · {second + 1}/10
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-        time.sleep(1)
-
-    # Black fade remains for the final five seconds.
-    effect.markdown(
-        """
-        <div style="
-            background:#000;color:#aaa;
-            padding:20px;text-align:center;
-            animation:fade-to-black 1s forwards;">
-            CONNECTION LOST
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    time.sleep(5)
+        st.session_state.death_sequence_done = True
+        st.rerun()
 
     st.markdown(
         """
         <div class="game-over">
-            <div style="font-size:13px;letter-spacing:5px;color:#aaa">
-                GAME SESSION ENDED
-            </div>
-            <h1 style="font-size:44px;margin-top:20px">
-                WASTED
-            </h1>
-            <p>Character status: eliminated</p>
-            <hr>
+            <div style="letter-spacing:5px;color:#aaa">GAME SESSION ENDED</div>
+            <h1 style="font-size:56px;margin-top:25px">WASTED</h1>
+            <p>Character eliminated · Fictional game screen</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -536,44 +471,51 @@ if st.session_state.game_over:
     c2.metric("Items bought", st.session_state.stats["items_bought"])
     c3.metric("Spins played", st.session_state.stats["spins"])
 
-    st.caption("This is a fictional game-over screen, not a real-world effect.")
-
     if st.button("Return to shop", use_container_width=True):
         st.session_state.game_over = False
+        st.session_state.death_sequence_done = False
         st.rerun()
 
-# -----------------------------
-# SHOP
-# -----------------------------
+# -------------------- SHOP --------------------
 
 elif page == "Shop":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
-    st.header("Explore")
-    st.caption("Browse a category and select an item to see its details.")
+    st.title("🛍️ Shop")
+    st.caption("Browse categories and click an item to view its details.")
+
+    if st.session_state.notice:
+        kind, message = st.session_state.notice
+        if kind == "success":
+            st.success(message)
+        elif kind == "error":
+            st.error(message)
+        else:
+            st.info(message)
+        st.session_state.notice = None
 
     search = st.text_input(
-        "Search",
-        placeholder="Find an item...",
-        label_visibility="collapsed"
+        "Search items",
+        placeholder="Try Bre, key, ura...",
     )
+    query = search.strip().casefold()
 
-    selected_category = st.selectbox(
+    category_choice = st.selectbox(
         "Category",
-        ["All categories"] + list(CATEGORIES.keys())
+        ["All categories"] + list(CATEGORIES.keys()),
     )
 
     categories = (
         CATEGORIES.items()
-        if selected_category == "All categories"
-        else [(selected_category, CATEGORIES[selected_category])]
+        if category_choice == "All categories"
+        else [(category_choice, CATEGORIES[category_choice])]
     )
 
-    count = 0
+    found = 0
 
     for category, items in categories:
         filtered = [
             item for item in items
-            if search.lower() in pretty_name(item).lower()
+            if query in pretty_name(item).casefold()
         ]
 
         if not filtered:
@@ -583,137 +525,110 @@ elif page == "Shop":
         st.subheader(category)
 
         for start in range(0, len(filtered), 3):
-            cols = st.columns(3)
+            columns = st.columns(3)
 
-            for col, item in zip(cols, filtered[start:start + 3]):
-                count += 1
+            for column, item in zip(columns, filtered[start:start + 3]):
+                found += 1
                 price, stock = st.session_state.shop[item]
 
-                with col:
+                with column:
                     with st.container(border=True):
                         st.markdown(
                             f"""
-                            <div class="shop-item">
-                                <div class="item-emoji">{emoji_for(item)}</div>
-                                <div class="item-name">{pretty_name(item)}</div>
-                                <div class="item-price">€{price:,.2f}</div>
-                                <div class="item-stock">{stock} available</div>
-                            </div>
+                            <div class="item-emoji">{emoji_for(item)}</div>
+                            <div class="item-name">{pretty_name(item)}</div>
+                            <div class="item-price">€{price:,.2f}</div>
+                            <div class="item-stock">{stock} available</div>
                             """,
-                            unsafe_allow_html=True
+                            unsafe_allow_html=True,
                         )
 
                         if st.button(
-                            "View details ↗",
+                            "View item ↗",
                             key=f"view_{item}",
-                            use_container_width=True
+                            use_container_width=True,
                         ):
                             item_dialog(item)
 
-    if count == 0:
-        st.info("No items found.")
+    if found == 0:
+        st.info("No items found. Try another search.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# -----------------------------
-# MONEY MACHINE
-# -----------------------------
+# -------------------- MONEY MACHINE --------------------
 
 elif page == "Money Machine":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
-    st.header("Money Machine")
-    st.caption("A free spin. No cost to play.")
+    st.title("🎰 Money Machine")
+    st.write("Free spins. Three reels. One big jackpot.")
+    st.caption("Reel 1 stops at 3.3s · Reel 2 at 6.6s · Reel 3 at 9.9s")
 
-    st.markdown(
-        """
-        <div style="
-            background:#191c17;
-            border:1px solid #373b30;
-            padding:22px;border-radius:16px;">
-            <div style="font-size:12px;letter-spacing:3px;color:#aeb39f">
-                THREE REELS · FREE PLAY
-            </div>
-            <h3>Try your luck.</h3>
-            <p style="color:#aeb39f">
-                Match symbols to collect bonus money.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.write("")
-
-    if st.button("SPIN  ↗", use_container_width=True):
+    # This button's callback runs a single complete spin.
+    # Streamlit cannot process a second click while the spin is running.
+    if st.button("🎰 SPIN — FREE", use_container_width=True):
         symbols = ["🍋", "🍒", "🍇", "🍉", "⭐", "💎", "🔔", "🍊"]
 
-        # Make the jackpot rare but possible.
         if random.random() < 0.04:
             final_symbols = ["🍋", "🍋", "🍋"]
         else:
             final_symbols = [random.choice(symbols) for _ in range(3)]
 
-        start = time.time()
-        stops = [2, 5, 10]
-        columns = st.columns(3)
-        reels = []
+        stop_times = [3.3, 6.6, 9.9]
+        reels = [st.empty(), st.empty(), st.empty()]
+        start_time = time.time()
 
-        for col in columns:
-            with col:
-                reels.append(st.empty())
-
-        # No progress bar. Each reel stops at its own time.
         while True:
-            elapsed = time.time() - start
+            elapsed = time.time() - start_time
 
             for i, reel in enumerate(reels):
                 symbol = (
                     random.choice(symbols)
-                    if elapsed < stops[i]
+                    if elapsed < stop_times[i]
                     else final_symbols[i]
                 )
-
                 reel.markdown(
                     f'<div class="slot">{symbol}</div>',
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
 
-            if elapsed >= 10:
+            if elapsed >= 9.9:
                 break
 
-            time.sleep(0.08)
+            time.sleep(0.05)
 
         if final_symbols == ["🍋", "🍋", "🍋"]:
             reward = 1000
-            st.session_state.money += reward
+            st.session_state.money = round(st.session_state.money + reward, 2)
             st.session_state.stats["money_earned"] += reward
+
             st.markdown(
                 """
                 <div class="jackpot">
-                    <div style="font-size:12px;letter-spacing:4px">
-                        JACKPOT
-                    </div>
-                    <div style="font-size:58px">🍋 🍋 🍋</div>
+                    <div style="letter-spacing:5px">JACKPOT</div>
+                    <div style="font-size:60px;margin:10px">🍋 🍋 🍋</div>
                     <h1>+ €1,000</h1>
-                    <p>PERFECT MATCH</p>
+                    <h3>PERFECT MATCH!</h3>
                 </div>
                 """,
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
             st.balloons()
+
         elif len(set(final_symbols)) == 1:
             reward = 25
             st.session_state.money += reward
             st.session_state.stats["money_earned"] += reward
-            st.success(f"Triple match! You won €{reward}.")
+            st.success("🎉 Triple match! You won €25!")
+
         elif len(set(final_symbols)) == 2:
             reward = 10
             st.session_state.money += reward
             st.session_state.stats["money_earned"] += reward
-            st.success(f"Two symbols match! You won €{reward}.")
+            st.success("✨ Two symbols match! You won €10!")
+
         else:
             reward = 0
-            st.info("No match this time. Better luck next spin!")
+            st.info("No match this time!")
 
         st.session_state.stats["spins"] += 1
         st.session_state.last_spin = {
@@ -728,64 +643,71 @@ elif page == "Money Machine":
         st.caption("LAST RESULT")
         st.write(
             "  ".join(st.session_state.last_spin["symbols"])
-            + f"   ·   €{st.session_state.last_spin['reward']:,.2f}"
+            + f"   ·   Reward: €{st.session_state.last_spin['reward']:,.2f}"
         )
 
     st.caption("🍋 🍋 🍋 = €1,000 · Triple = €25 · Pair = €10 · Other = €0")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# -----------------------------
-# INVENTORY
-# -----------------------------
+# -------------------- INVENTORY --------------------
 
 elif page == "Inventory":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
-    st.header("Inventory")
-    st.caption("Everything you own, in one place.")
+    st.title("🎒 Inventory")
+    st.caption("Everything you own.")
+
+    if st.session_state.notice:
+        kind, message = st.session_state.notice
+        if kind == "success":
+            st.success(message)
+        elif kind == "error":
+            st.error(message)
+        else:
+            st.info(message)
+        st.session_state.notice = None
 
     if not st.session_state.inventory:
-        st.info("Your inventory is empty. Visit the shop to collect items.")
+        st.info("Your inventory is empty. Visit the shop to buy items.")
     else:
         for item, quantity in list(st.session_state.inventory.items()):
-            with st.container(border=True):
-                c1, c2, c3 = st.columns([1, 3, 1])
+            if quantity <= 0:
+                continue
 
-                with c1:
+            with st.container(border=True):
+                col1, col2, col3 = st.columns([1, 3, 1])
+
+                with col1:
                     st.markdown(
-                        f"<div style='font-size:36px'>{emoji_for(item)}</div>",
-                        unsafe_allow_html=True
+                        f"<div style='font-size:38px'>{emoji_for(item)}</div>",
+                        unsafe_allow_html=True,
                     )
 
-                with c2:
+                with col2:
                     st.markdown(f"**{pretty_name(item)}**")
                     st.caption(INFO[item][1])
                     st.caption(f"Quantity: {quantity}")
 
-                with c3:
-                    if item == "uranium":
-                        button_text = "Use item"
-                    elif INFO[item][2]:
-                        button_text = "Eat / use"
+                with col3:
+                    if INFO[item][2] or item == "uranium":
+                        button_label = "Use item"
                     else:
-                        button_text = "Inspect"
+                        button_label = "Inspect"
 
                     if st.button(
-                        button_text,
+                        button_label,
                         key=f"use_{item}",
-                        use_container_width=True
+                        use_container_width=True,
                     ):
                         use_item(item)
                         st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# -----------------------------
-# STATS
-# -----------------------------
+# -------------------- STATS --------------------
 
 elif page == "Stats":
     st.markdown('<div class="page-content">', unsafe_allow_html=True)
-    st.header("Statistics")
+    st.title("📊 Statistics")
     st.caption("Your progress this session.")
 
     c1, c2 = st.columns(2)
@@ -795,16 +717,13 @@ elif page == "Stats":
     c3, c4 = st.columns(2)
     c3.metric("Spins played", st.session_state.stats["spins"])
     c4.metric(
-        "Money earned from machine",
-        f"€{st.session_state.stats['money_earned']:,.2f}"
+        "Machine earnings",
+        f"€{st.session_state.stats['money_earned']:,.2f}",
     )
 
     st.divider()
-    st.subheader("Inventory summary")
-    st.write(f"Unique items owned: {len(st.session_state.inventory)}")
-    st.write(
-        "Total item quantity: "
-        + str(sum(st.session_state.inventory.values()))
-    )
+    st.subheader("Collection")
+    st.write(f"Unique items: {len(st.session_state.inventory)}")
+    st.write(f"Total quantity: {sum(st.session_state.inventory.values())}")
 
     st.markdown("</div>", unsafe_allow_html=True)
